@@ -1,0 +1,11 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <rect x="16" y="16" width="224" height="224" rx="56" ry="56" fill="#020617"></rect>
+  <rect x="36" y="36" width="184" height="184" rx="40" ry="40" fill="#0f172a"></rect>
+  <circle cx="92" cy="96" r="40" fill="#22c55e"></circle>
+  <path d="M92 64 L92 96 L118 112" stroke="#022c22" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+  <rect x="132" y="132" width="80" height="16" rx="8" fill="#22c55e"></rect>
+  <rect x="132" y="160" width="56" height="12" rx="6" fill="#16a34a"></rect>
+  <text x="128" y="218" text-anchor="middle" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="28" fill="#f9fafb">
+    ET
+  </text>
+</svg>

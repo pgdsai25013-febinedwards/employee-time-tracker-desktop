@@ -1,0 +1,91 @@
+// src/App.tsx - Electron version with system-wide idle detection, offline support, and smart notifications
+import React, { useEffect, useState, useRef } from "react";
+import { Button } from "./components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { DatePicker } from "./components/ui/date-picker";
+import { Input } from "./components/ui/input";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "./components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Badge } from "./components/ui/badge";
+import {
+    ChevronLeft,
+    ChevronRight,
+    LogOut,
+    Moon,
+    Sun,
+    Trash2,
+    Edit,
+    Wifi,
+    WifiOff,
+} from "lucide-react";
+import { offlineManager } from "./lib/offline-manager";
+import { NotificationSettings } from "./components/NotificationSettings";
+
+/* ---------------- Types ---------------- */
+type AuthUser = {
+    id: number;
+    full_name: string;
+    email: string;
+    role: string;
+    team_id: number | null;
+    avatar_url?: string | null;
+};
+
+type Team = { id: number; name: string };
+type Task = { id: number; team_id: number; name: string };
+type TabId = "tracker" | "dashboard" | "history" | "profile";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+
+declare global {
+    interface Window {
+        google?: any;
+    }
+}
+
+/* ---------------- Formatters ---------------- */
+const formatDateLabel = (isoDate: string) => {
+    const d = new Date(isoDate + "T00:00:00");
+    return d.toLocaleDateString(undefined, {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+    });
+};
+
+const formatElapsed = (totalSeconds: number) => {
+    if (totalSeconds <= 0) return "00:00";
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hrs > 0) {
+        return `${hrs.toString().padStart(2, "0")}:${mins
+            .toString()
+            .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+};
+
+/* ---------------- App ---------------- */
+const App: React.FC = () => {
+    // Auth
+    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [authToken, setAuthToken] = useState<string | null>(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+
+    // UI
+    const [activeTab, setActiveTab] = useState<TabId>("tracker");
+    const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+    // Teams & tasks
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [selectedTaskId, setSelectedTaskId] = useState<number | "">("FINAL_FILE_TO_CONTINUE_IN_NEXT_MESSAGE"
