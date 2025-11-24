@@ -795,7 +795,7 @@ const App: React.FC = () => {
                             {isTimerActive && (
                                 <>
                                     <Badge variant="secondary" className="text-[10px]">Timer #{currentLogId}  Elapsed {formatElapsed(elapsedSeconds)}</Badge>
-                                    <Badge variant={isIdleNow ? "outline" : "secondary"} className={	ext-[10px] }>
+                                    <Badge variant={isIdleNow ? "outline" : "secondary"} className={`text-[10px] ${isIdleNow ? "border-red-500 text-red-300" : "bg-emerald-600/80"}`}>
                                         {isIdleNow ? "IDLE" : "ACTIVE"}  Idle {idleMinutes}m
                                     </Badge>
                                 </>
@@ -820,477 +820,477 @@ const App: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)}>
                         <TabsList className="bg-slate-900/80">
-                    <TabsTrigger value="tracker">Tracker</TabsTrigger>
-                    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                    <TabsTrigger value="history">History Tracker</TabsTrigger>
-                    <TabsTrigger value="profile">Profile</TabsTrigger>
-                </TabsList >
-            </Tabs >
+                            <TabsTrigger value="tracker">Tracker</TabsTrigger>
+                            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                            <TabsTrigger value="history">History Tracker</TabsTrigger>
+                            <TabsTrigger value="profile">Profile</TabsTrigger>
+                        </TabsList >
+                    </Tabs >
 
-    <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-400">Team:</span>
-        <select
-            value={selectedTeamId ?? ""}
-            onChange={(e) => {
-                const next = Number(e.target.value);
-                setSelectedTeamId(next || null);
-                setSelectedTaskId("");
-            }}
-            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-xs sm:text-sm"
-        >
-            <option value="">Select teamâ€¦</option>
-            {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                    {t.name}
-                </option>
-            ))}
-        </select>
-    </div>
-        </div >
-
-    { activeTab === "tracker" && (
-        <section className="space-y-3">
-            <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Tracker â€“ record today's time &amp; volume</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                        <div className="space-y-1">
-                            <div className="text-xs text-slate-400">Task</div>
-                            <select
-                                value={selectedTaskId}
-                                onChange={(e) => setSelectedTaskId(e.target.value === "" ? "" : Number(e.target.value))}
-                                className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs sm:text-sm"
-                                disabled={!selectedTeamId || isTimerActive}
-                            >
-                                <option value="">{selectedTeamId ? "Select taskâ€¦" : "Select a team firstâ€¦"}</option>
-                                {tasks.map((task) => (
-                                    <option key={task.id} value={task.id}>
-                                        {task.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="text-[10px] text-slate-500">Task list based on the team you selected.</div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="text-xs text-slate-400">Volume (units processed)</div>
-                            <Input
-                                placeholder="e.g. 120"
-                                value={volumeInput}
-                                onChange={(e) => setVolumeInput(e.target.value)}
-                                className="bg-slate-950 border-slate-700 text-xs sm:text-sm"
-                            />
-                            <div className="text-[10px] text-slate-500">Enter Volume</div>
-                        </div>
-
-                        <div className="flex gap-2 justify-end">
-                            <Button
-                                className="bg-emerald-500 hover:bg-emerald-600 text-xs sm:text-sm"
-                                disabled={selectedTaskId === "" || !selectedTeamId || isStarting || isTimerActive}
-                                onClick={handleStartTimer}
-                            >
-                                {isStarting ? "Startingâ€¦" : "Start timer"}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="border-slate-700 text-xs sm:text-sm"
-                                disabled={!isTimerActive || isStopping}
-                                onClick={handleStopTimer}
-                            >
-                                {isStopping ? "Savingâ€¦" : "Stop & save"}
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="text-[11px] text-slate-500">
-                        <strong>System-wide idle detection:</strong> Idle time is calculated using OS-level APIs that track
-                        your entire computer activity (keyboard, mouse, etc.), not just this app window. Final productive
-                        time = Duration âˆ’ Idle.
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Tasks recorded</CardTitle>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7 border-slate-700"
-                            onClick={() => alert("Paging not implemented in demo.")}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Team:</span>
+                        <select
+                            value={selectedTeamId ?? ""}
+                            onChange={(e) => {
+                                const next = Number(e.target.value);
+                                setSelectedTeamId(next || null);
+                                setSelectedTaskId("");
+                            }}
+                            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-xs sm:text-sm"
                         >
-                            <ChevronLeft className="h-3 w-3" />
-                        </Button>
-                        <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7 border-slate-700"
-                            onClick={() => alert("Paging not implemented in demo.")}
-                        >
-                            <ChevronRight className="h-3 w-3" />
-                        </Button>
+                            <option value="">Select teamâ€¦</option>
+                            {teams.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {dayGroups.length === 0 && (
-                        <div className="text-xs text-slate-500">No logs recorded for the last 3 days yet.</div>
-                    )}
+                </div >
 
-                    {dayGroups.map((day) => {
-                        const isOpen = openDays[day.date] ?? true;
-                        const totalMinutes = day.logs.reduce((s: number, l: any) => s + l.durationMinutes, 0);
-                        const totalVolume = day.logs.reduce((s: number, l: any) => s + (l.volume || 0), 0);
-                        const totalIdle = day.logs.reduce((s: number, l: any) => s + l.idleMinutes, 0);
-                        const totalProductive = Math.max(0, totalMinutes - totalIdle);
-                        return (
-                            <div key={day.date} className="border border-slate-800 rounded-md overflow-hidden">
-                                <button
-                                    type="button"
-                                    onClick={() => toggleDay(day.date)}
-                                    className="w-full flex items-center justify-between px-3 py-2 bg-slate-900/80 hover:bg-slate-800/80 text-xs"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium">{formatDateLabel(day.date)}</span>
-                                        <span className="text-[11px] text-slate-400">{day.logs.length} entries</span>
+                {activeTab === "tracker" && (
+                    <section className="space-y-3">
+                        <Card className="bg-slate-900/70 border-slate-800">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Tracker â€“ record today's time &amp; volume</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                    <div className="space-y-1">
+                                        <div className="text-xs text-slate-400">Task</div>
+                                        <select
+                                            value={selectedTaskId}
+                                            onChange={(e) => setSelectedTaskId(e.target.value === "" ? "" : Number(e.target.value))}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs sm:text-sm"
+                                            disabled={!selectedTeamId || isTimerActive}
+                                        >
+                                            <option value="">{selectedTeamId ? "Select taskâ€¦" : "Select a team firstâ€¦"}</option>
+                                            {tasks.map((task) => (
+                                                <option key={task.id} value={task.id}>
+                                                    {task.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="text-[10px] text-slate-500">Task list based on the team you selected.</div>
                                     </div>
-                                    <div className="flex items-center gap-4 text-[11px] text-slate-400">
-                                        <span>{totalMinutes} min</span>
-                                        <span>Idle {totalIdle} min</span>
-                                        <span>Final prod {totalProductive} min</span>
-                                        <span>{totalVolume} units</span>
-                                        <span>{isOpen ? "Hide" : "Show"}</span>
-                                    </div>
-                                </button>
 
-                                {isOpen && (
-                                    <div className="px-2 pb-2 bg-slate-950/60">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="text-xs">Task</TableHead>
-                                                    <TableHead className="text-xs">Start</TableHead>
-                                                    <TableHead className="text-xs">End</TableHead>
-                                                    <TableHead className="text-xs text-right">Idle</TableHead>
-                                                    <TableHead className="text-xs text-right">Duration</TableHead>
-                                                    <TableHead className="text-xs text-right">Productive</TableHead>
-                                                    <TableHead className="text-xs text-right">Volume</TableHead>
-                                                    <TableHead className="text-xs text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {day.logs.map((log: any) => {
-                                                    const productive = Math.max(0, log.durationMinutes - log.idleMinutes);
-                                                    return (
-                                                        <TableRow key={log.id}>
-                                                            <TableCell className="text-[11px]">{log.taskName}</TableCell>
-                                                            <TableCell className="text-[11px]">{log.start}</TableCell>
-                                                            <TableCell className="text-[11px]">{log.end}</TableCell>
-                                                            <TableCell className="text-[11px] text-right">{log.idleMinutes} min</TableCell>
-                                                            <TableCell className="text-[11px] text-right">{log.durationMinutes} min</TableCell>
-                                                            <TableCell className="text-[11px] text-right">{productive} min</TableCell>
-                                                            <TableCell className="text-[11px] text-right">{log.volume}</TableCell>
-                                                            <TableCell className="text-[11px] text-right">
-                                                                <div className="flex justify-end gap-1">
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="outline"
-                                                                        className="h-6 w-6 border-slate-700"
-                                                                        onClick={() => openEditLog(log)}
-                                                                    >
-                                                                        <Edit className="h-3 w-3" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="icon"
-                                                                        variant="outline"
-                                                                        className="h-6 w-6 border-slate-700 text-red-400 hover:text-red-300"
-                                                                        onClick={() => deleteLog(log)}
-                                                                        disabled={isDeletingId === log.id}
-                                                                    >
-                                                                        <Trash2 className="h-3 w-3" />
-                                                                    </Button>
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })}
-                                            </TableBody>
-                                        </Table>
+                                    <div className="space-y-1">
+                                        <div className="text-xs text-slate-400">Volume (units processed)</div>
+                                        <Input
+                                            placeholder="e.g. 120"
+                                            value={volumeInput}
+                                            onChange={(e) => setVolumeInput(e.target.value)}
+                                            className="bg-slate-950 border-slate-700 text-xs sm:text-sm"
+                                        />
+                                        <div className="text-[10px] text-slate-500">Enter Volume</div>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </CardContent>
-            </Card>
 
-            {editingLog && (
-                <Card id="edit-panel" className="bg-slate-900/80 border-slate-800">
-                    <CardHeader>
-                        <CardTitle className="text-sm">Edit log #{editingLog.id}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-xs">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Work date</div>
-                                <DatePicker value={editDate} onChange={setEditDate} />
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Task (same team)</div>
-                                <select
-                                    value={editTaskId}
-                                    onChange={(e) => setEditTaskId(e.target.value === "" ? "" : Number(e.target.value))}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs"
-                                >
-                                    <option value="">{selectedTeamId ? "Select taskâ€¦" : "Select team at topâ€¦"}</option>
-                                    {tasks.map((t) => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="text-[10px] text-slate-500">
-                                    The list is based on the currently selected team in the top-right.
+                                    <div className="flex gap-2 justify-end">
+                                        <Button
+                                            className="bg-emerald-500 hover:bg-emerald-600 text-xs sm:text-sm"
+                                            disabled={selectedTaskId === "" || !selectedTeamId || isStarting || isTimerActive}
+                                            onClick={handleStartTimer}
+                                        >
+                                            {isStarting ? "Startingâ€¦" : "Start timer"}
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="border-slate-700 text-xs sm:text-sm"
+                                            disabled={!isTimerActive || isStopping}
+                                            onClick={handleStopTimer}
+                                        >
+                                            {isStopping ? "Savingâ€¦" : "Stop & save"}
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Volume (units)</div>
-                                <Input
-                                    value={editVolume}
-                                    onChange={(e) => setEditVolume(e.target.value)}
-                                    className="bg-slate-950 border-slate-700 text-xs"
-                                />
-                            </div>
-                        </div>
 
-                        <div className="flex justify-end gap-2 mt-2">
-                            <Button
-                                variant="outline"
-                                className="border-slate-700 text-xs"
-                                onClick={cancelEdit}
-                                disabled={isSavingEdit}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                className="bg-emerald-500 hover:bg-emerald-600 text-xs"
-                                onClick={saveEdit}
-                                disabled={isSavingEdit}
-                            >
-                                {isSavingEdit ? "Savingâ€¦" : "Save changes"}
-                            </Button>
-                        </div>
+                                <div className="text-[11px] text-slate-500">
+                                    <strong>System-wide idle detection:</strong> Idle time is calculated using OS-level APIs that track
+                                    your entire computer activity (keyboard, mouse, etc.), not just this app window. Final productive
+                                    time = Duration âˆ’ Idle.
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                        <p className="text-[10px] text-slate-500 mt-1">
-                            You can edit <strong>date</strong>, <strong>task</strong>, and <strong>volume</strong>. Idle time
-                            is controlled by the system and cannot be changed here.
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
-        </section>
-    )}
+                        <Card className="bg-slate-900/70 border-slate-800">
+                            <CardHeader className="flex items-center justify-between">
+                                <CardTitle className="text-sm">Tasks recorded</CardTitle>
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                    <Button
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-7 w-7 border-slate-700"
+                                        onClick={() => alert("Paging not implemented in demo.")}
+                                    >
+                                        <ChevronLeft className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-7 w-7 border-slate-700"
+                                        onClick={() => alert("Paging not implemented in demo.")}
+                                    >
+                                        <ChevronRight className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {dayGroups.length === 0 && (
+                                    <div className="text-xs text-slate-500">No logs recorded for the last 3 days yet.</div>
+                                )}
 
-{
-    activeTab === "dashboard" && (
-        <section className="space-y-3">
-            <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader>
-                    <CardTitle className="text-sm">Dashboard â€“ manager tools &amp; future metrics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-xs text-slate-300">
-                    <div className="space-y-1">
-                        <p>
-                            Here we will show metrics like productive time, idle time, total volume, and utilization for the
-                            selected employee and period.
-                        </p>
-                        <p>For now, we have a Month Lock feature used by managers to freeze/unfreeze months.</p>
-                    </div>
-                    <div className="border border-slate-800 rounded-md p-3 bg-slate-950/60 space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-end">
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Year</div>
-                                <Input
-                                    type="number"
-                                    placeholder="2025"
-                                    value={lockYear}
-                                    onChange={(e) => setLockYear(e.target.value)}
-                                    className="bg-slate-950 border-slate-700 text-xs"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Month</div>
-                                <select
-                                    value={lockMonth}
-                                    onChange={(e) => setLockMonth(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs"
-                                >
-                                    <option value="">Select monthâ€¦</option>
-                                    <option value="1">Jan</option>
-                                    <option value="2">Feb</option>
-                                    <option value="3">Mar</option>
-                                    <option value="4">Apr</option>
-                                    <option value="5">May</option>
-                                    <option value="6">Jun</option>
-                                    <option value="7">Jul</option>
-                                    <option value="8">Aug</option>
-                                    <option value="9">Sep</option>
-                                    <option value="10">Oct</option>
-                                    <option value="11">Nov</option>
-                                    <option value="12">Dec</option>
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <Button
-                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-[11px]"
-                                    onClick={async () => alert("Check status in demo")}
-                                    disabled={!selectedTeamId}
-                                >
-                                    Check status
-                                </Button>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <Button
-                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-[11px]"
-                                    onClick={() => alert("Locking is demo-only")}
-                                    disabled={!selectedTeamId}
-                                >
-                                    Lock month
-                                </Button>
-                                <Button
-                                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-[11px]"
-                                    onClick={() => alert("Unlocking is demo-only")}
-                                    disabled={!selectedTeamId}
-                                >
-                                    Unlock month
-                                </Button>
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[11px] text-slate-400">Status</div>
-                                {lockStatus === null && (
-                                    <div className="text-[11px] text-slate-500">
-                                        No status yet. Check, lock or unlock to see result.
+                                {dayGroups.map((day) => {
+                                    const isOpen = openDays[day.date] ?? true;
+                                    const totalMinutes = day.logs.reduce((s: number, l: any) => s + l.durationMinutes, 0);
+                                    const totalVolume = day.logs.reduce((s: number, l: any) => s + (l.volume || 0), 0);
+                                    const totalIdle = day.logs.reduce((s: number, l: any) => s + l.idleMinutes, 0);
+                                    const totalProductive = Math.max(0, totalMinutes - totalIdle);
+                                    return (
+                                        <div key={day.date} className="border border-slate-800 rounded-md overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleDay(day.date)}
+                                                className="w-full flex items-center justify-between px-3 py-2 bg-slate-900/80 hover:bg-slate-800/80 text-xs"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">{formatDateLabel(day.date)}</span>
+                                                    <span className="text-[11px] text-slate-400">{day.logs.length} entries</span>
+                                                </div>
+                                                <div className="flex items-center gap-4 text-[11px] text-slate-400">
+                                                    <span>{totalMinutes} min</span>
+                                                    <span>Idle {totalIdle} min</span>
+                                                    <span>Final prod {totalProductive} min</span>
+                                                    <span>{totalVolume} units</span>
+                                                    <span>{isOpen ? "Hide" : "Show"}</span>
+                                                </div>
+                                            </button>
+
+                                            {isOpen && (
+                                                <div className="px-2 pb-2 bg-slate-950/60">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead className="text-xs">Task</TableHead>
+                                                                <TableHead className="text-xs">Start</TableHead>
+                                                                <TableHead className="text-xs">End</TableHead>
+                                                                <TableHead className="text-xs text-right">Idle</TableHead>
+                                                                <TableHead className="text-xs text-right">Duration</TableHead>
+                                                                <TableHead className="text-xs text-right">Productive</TableHead>
+                                                                <TableHead className="text-xs text-right">Volume</TableHead>
+                                                                <TableHead className="text-xs text-right">Actions</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {day.logs.map((log: any) => {
+                                                                const productive = Math.max(0, log.durationMinutes - log.idleMinutes);
+                                                                return (
+                                                                    <TableRow key={log.id}>
+                                                                        <TableCell className="text-[11px]">{log.taskName}</TableCell>
+                                                                        <TableCell className="text-[11px]">{log.start}</TableCell>
+                                                                        <TableCell className="text-[11px]">{log.end}</TableCell>
+                                                                        <TableCell className="text-[11px] text-right">{log.idleMinutes} min</TableCell>
+                                                                        <TableCell className="text-[11px] text-right">{log.durationMinutes} min</TableCell>
+                                                                        <TableCell className="text-[11px] text-right">{productive} min</TableCell>
+                                                                        <TableCell className="text-[11px] text-right">{log.volume}</TableCell>
+                                                                        <TableCell className="text-[11px] text-right">
+                                                                            <div className="flex justify-end gap-1">
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="outline"
+                                                                                    className="h-6 w-6 border-slate-700"
+                                                                                    onClick={() => openEditLog(log)}
+                                                                                >
+                                                                                    <Edit className="h-3 w-3" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="outline"
+                                                                                    className="h-6 w-6 border-slate-700 text-red-400 hover:text-red-300"
+                                                                                    onClick={() => deleteLog(log)}
+                                                                                    disabled={isDeletingId === log.id}
+                                                                                >
+                                                                                    <Trash2 className="h-3 w-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                );
+                                                            })}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </CardContent>
+                        </Card>
+
+                        {editingLog && (
+                            <Card id="edit-panel" className="bg-slate-900/80 border-slate-800">
+                                <CardHeader>
+                                    <CardTitle className="text-sm">Edit log #{editingLog.id}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3 text-xs">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-slate-400">Work date</div>
+                                            <DatePicker value={editDate} onChange={setEditDate} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-slate-400">Task (same team)</div>
+                                            <select
+                                                value={editTaskId}
+                                                onChange={(e) => setEditTaskId(e.target.value === "" ? "" : Number(e.target.value))}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs"
+                                            >
+                                                <option value="">{selectedTeamId ? "Select taskâ€¦" : "Select team at topâ€¦"}</option>
+                                                {tasks.map((t) => (
+                                                    <option key={t.id} value={t.id}>
+                                                        {t.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="text-[10px] text-slate-500">
+                                                The list is based on the currently selected team in the top-right.
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-slate-400">Volume (units)</div>
+                                            <Input
+                                                value={editVolume}
+                                                onChange={(e) => setEditVolume(e.target.value)}
+                                                className="bg-slate-950 border-slate-700 text-xs"
+                                            />
+                                        </div>
                                     </div>
-                                )}
-                                {lockStatus === "locked" && (
-                                    <Badge variant="secondary" className="text-[10px] bg-emerald-600/80">
-                                        Locked â€“ edits, deletes &amp; stop blocked by backend
-                                    </Badge>
-                                )}
-                                {lockStatus === "unlocked" && (
-                                    <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-300">
-                                        Unlocked â€“ edits &amp; deletes allowed
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </section>
-    )
-}
 
-{
-    activeTab === "history" && (
-        <section className="space-y-3">
-            <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader>
-                    <CardTitle className="text-sm">History Tracker â€“ export CSV</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-xs text-slate-300">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                            <div className="text-[11px] text-slate-400">From date</div>
-                            <DatePicker value={historyFrom} onChange={setHistoryFrom} placeholder="From date" />
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-[11px] text-slate-400">To date</div>
-                            <DatePicker value={historyTo} onChange={setHistoryTo} placeholder="To date" />
-                        </div>
-                        <div className="flex items-end">
-                            <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-xs" onClick={handleDownloadCSV}>
-                                Download CSV
-                            </Button>
-                        </div>
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                        This downloads all your time logs between these dates as a CSV file.
-                    </p>
-                </CardContent>
-            </Card>
-        </section>
-    )
-}
+                                    <div className="flex justify-end gap-2 mt-2">
+                                        <Button
+                                            variant="outline"
+                                            className="border-slate-700 text-xs"
+                                            onClick={cancelEdit}
+                                            disabled={isSavingEdit}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            className="bg-emerald-500 hover:bg-emerald-600 text-xs"
+                                            onClick={saveEdit}
+                                            disabled={isSavingEdit}
+                                        >
+                                            {isSavingEdit ? "Savingâ€¦" : "Save changes"}
+                                        </Button>
+                                    </div>
 
-{
-    activeTab === "profile" && (
-        <section className="space-y-3">
-            <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader>
-                    <CardTitle className="text-sm">Profile</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-xs text-slate-300">
-                    <div>
-                        <span className="font-semibold">Name: </span>
-                        {authUser.full_name}
-                    </div>
-                    <div>
-                        <span className="font-semibold">Email: </span>
-                        {authUser.email}
-                    </div>
-                    <div>
-                        <span className="font-semibold">Team: </span>
-                        {teams.find((t) => t.id === selectedTeamId)?.name ??
-                            (authUser.team_id ? `Team #${authUser.team_id}` : "None selected")}
-                    </div>
-                    <div>
-                        <span className="font-semibold">Role: </span>
-                        {authUser.role}
-                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-1">
+                                        You can edit <strong>date</strong>, <strong>task</strong>, and <strong>volume</strong>. Idle time
+                                        is controlled by the system and cannot be changed here.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </section>
+                )}
 
-                    {authUser.team_id == null && (
-                        <div className="mt-2">
-                            <div className="text-[11px] text-slate-400 mb-1">
-                                You don't have a team assigned. Choose one below and click Save.
-                            </div>
-                            <div className="flex gap-2 items-center">
-                                <select
-                                    value={selectedTeamId ?? ""}
-                                    onChange={(e) => setSelectedTeamId(Number(e.target.value) || null)}
-                                    className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-xs"
-                                >
-                                    <option value="">Select teamâ€¦</option>
-                                    {teams.map((t) => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <Button
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-xs"
-                                    onClick={() => {
-                                        if (!selectedTeamId) alert("Choose a team first.");
-                                        else setTeamForUser(selectedTeamId);
-                                    }}
-                                >
-                                    Save team
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                {
+                    activeTab === "dashboard" && (
+                        <section className="space-y-3">
+                            <Card className="bg-slate-900/70 border-slate-800">
+                                <CardHeader>
+                                    <CardTitle className="text-sm">Dashboard â€“ manager tools &amp; future metrics</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 text-xs text-slate-300">
+                                    <div className="space-y-1">
+                                        <p>
+                                            Here we will show metrics like productive time, idle time, total volume, and utilization for the
+                                            selected employee and period.
+                                        </p>
+                                        <p>For now, we have a Month Lock feature used by managers to freeze/unfreeze months.</p>
+                                    </div>
+                                    <div className="border border-slate-800 rounded-md p-3 bg-slate-950/60 space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-end">
+                                            <div className="space-y-1">
+                                                <div className="text-[11px] text-slate-400">Year</div>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="2025"
+                                                    value={lockYear}
+                                                    onChange={(e) => setLockYear(e.target.value)}
+                                                    className="bg-slate-950 border-slate-700 text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-[11px] text-slate-400">Month</div>
+                                                <select
+                                                    value={lockMonth}
+                                                    onChange={(e) => setLockMonth(e.target.value)}
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs"
+                                                >
+                                                    <option value="">Select monthâ€¦</option>
+                                                    <option value="1">Jan</option>
+                                                    <option value="2">Feb</option>
+                                                    <option value="3">Mar</option>
+                                                    <option value="4">Apr</option>
+                                                    <option value="5">May</option>
+                                                    <option value="6">Jun</option>
+                                                    <option value="7">Jul</option>
+                                                    <option value="8">Aug</option>
+                                                    <option value="9">Sep</option>
+                                                    <option value="10">Oct</option>
+                                                    <option value="11">Nov</option>
+                                                    <option value="12">Dec</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <Button
+                                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-[11px]"
+                                                    onClick={async () => alert("Check status in demo")}
+                                                    disabled={!selectedTeamId}
+                                                >
+                                                    Check status
+                                                </Button>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <Button
+                                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-[11px]"
+                                                    onClick={() => alert("Locking is demo-only")}
+                                                    disabled={!selectedTeamId}
+                                                >
+                                                    Lock month
+                                                </Button>
+                                                <Button
+                                                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-[11px]"
+                                                    onClick={() => alert("Unlocking is demo-only")}
+                                                    disabled={!selectedTeamId}
+                                                >
+                                                    Unlock month
+                                                </Button>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-[11px] text-slate-400">Status</div>
+                                                {lockStatus === null && (
+                                                    <div className="text-[11px] text-slate-500">
+                                                        No status yet. Check, lock or unlock to see result.
+                                                    </div>
+                                                )}
+                                                {lockStatus === "locked" && (
+                                                    <Badge variant="secondary" className="text-[10px] bg-emerald-600/80">
+                                                        Locked â€“ edits, deletes &amp; stop blocked by backend
+                                                    </Badge>
+                                                )}
+                                                {lockStatus === "unlocked" && (
+                                                    <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-300">
+                                                        Unlocked â€“ edits &amp; deletes allowed
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </section>
+                    )
+                }
 
-                    <p className="text-[11px] text-slate-500 mt-2">
-                        Your account was created via Google sign-in. You can update your team here if needed.
-                    </p>
-                </CardContent>
-            </Card>
-        </section>
-    )
-}
-    </main >
+                {
+                    activeTab === "history" && (
+                        <section className="space-y-3">
+                            <Card className="bg-slate-900/70 border-slate-800">
+                                <CardHeader>
+                                    <CardTitle className="text-sm">History Tracker â€“ export CSV</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3 text-xs text-slate-300">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-slate-400">From date</div>
+                                            <DatePicker value={historyFrom} onChange={setHistoryFrom} placeholder="From date" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-slate-400">To date</div>
+                                            <DatePicker value={historyTo} onChange={setHistoryTo} placeholder="To date" />
+                                        </div>
+                                        <div className="flex items-end">
+                                            <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-xs" onClick={handleDownloadCSV}>
+                                                Download CSV
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">
+                                        This downloads all your time logs between these dates as a CSV file.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </section>
+                    )
+                }
+
+                {
+                    activeTab === "profile" && (
+                        <section className="space-y-3">
+                            <Card className="bg-slate-900/70 border-slate-800">
+                                <CardHeader>
+                                    <CardTitle className="text-sm">Profile</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-xs text-slate-300">
+                                    <div>
+                                        <span className="font-semibold">Name: </span>
+                                        {authUser.full_name}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Email: </span>
+                                        {authUser.email}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Team: </span>
+                                        {teams.find((t) => t.id === selectedTeamId)?.name ??
+                                            (authUser.team_id ? `Team #${authUser.team_id}` : "None selected")}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Role: </span>
+                                        {authUser.role}
+                                    </div>
+
+                                    {authUser.team_id == null && (
+                                        <div className="mt-2">
+                                            <div className="text-[11px] text-slate-400 mb-1">
+                                                You don't have a team assigned. Choose one below and click Save.
+                                            </div>
+                                            <div className="flex gap-2 items-center">
+                                                <select
+                                                    value={selectedTeamId ?? ""}
+                                                    onChange={(e) => setSelectedTeamId(Number(e.target.value) || null)}
+                                                    className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-xs"
+                                                >
+                                                    <option value="">Select teamâ€¦</option>
+                                                    {teams.map((t) => (
+                                                        <option key={t.id} value={t.id}>
+                                                            {t.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <Button
+                                                    className="bg-emerald-500 hover:bg-emerald-600 text-xs"
+                                                    onClick={() => {
+                                                        if (!selectedTeamId) alert("Choose a team first.");
+                                                        else setTeamForUser(selectedTeamId);
+                                                    }}
+                                                >
+                                                    Save team
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <p className="text-[11px] text-slate-500 mt-2">
+                                        Your account was created via Google sign-in. You can update your team here if needed.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </section>
+                    )
+                }
+            </main >
         </div >
     );
 };
