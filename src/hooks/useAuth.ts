@@ -12,8 +12,8 @@ export type AuthUser = {
 };
 
 export function useAuth() {
-    const [authUser, setAuthUser] = useState\u003cAuthUser | null\u003e(null);
-    const [authToken, setAuthToken] = useState\u003cstring | null\u003e(null);
+    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [authToken, setAuthToken] = useState<string | null>(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
 
     // Load session from localStorage

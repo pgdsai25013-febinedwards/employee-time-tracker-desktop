@@ -2,49 +2,39 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Card, CardContent } from './components/ui/card';
 import { Button } from './components/ui/button';
-
 // Hooks
 import { useAuth } from './hooks/useAuth';
 import { useTimer } from './hooks/useTimer';
 import { useTimeLogs } from './hooks/useTimeLogs';
 import { useOffline } from './hooks/useOffline';
 import { useNotifications } from './hooks/useNotifications';
-
 // Components
 import { AppHeader } from './components/AppHeader';
 import { LogEditModal } from './components/LogEditModal';
-
 // Pages
 import { LoginPage } from './pages/LoginPage';
 import { TrackerTab } from './pages/TrackerTab';
 import { DashboardTab } from './pages/DashboardTab';
 import { HistoryTab } from './pages/HistoryTab';
 import { ProfileTab } from './pages/ProfileTab';
-
 type Team = { id: number; name: string };
 type Task = { id: number; team_id: number; name: string };
 type TabId = 'tracker' | 'dashboard' | 'history' | 'profile';
-
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-
 const App: React.FC = () => {
     // Auth hook
     const auth = useAuth();
-
     // UI state
     const [activeTab, setActiveTab] = useState<TabId>('tracker');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
     // Teams & tasks
     const [teams, setTeams] = useState<Team[]>([]);
     const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [selectedTaskId, setSelectedTaskId] = useState<number | ''>('');
     const [volumeInput, setVolumeInput] = useState<string>('');
-
     // Initialize time logs hook
     const timeLogs = useTimeLogs(auth.authToken, tasks);
-
     // Initialize timer hook (needs to call timeLogs.fetchRecentLogs)
     const timer = useTimer(
         auth.authToken,
@@ -54,20 +44,16 @@ const App: React.FC = () => {
         setVolumeInput,
         timeLogs.fetchRecentLogs
     );
-
     // Initialize offline hook
     const offline = useOffline(auth.authToken);
-
     // Initialize notifications hook
     const notifications = useNotifications(timeLogs.dayGroups, timer.currentLogId);
-
     // Apply theme
     useEffect(() => {
         const root = document.documentElement;
         if (theme === 'dark') root.classList.add('dark');
         else root.classList.remove('dark');
     }, [theme]);
-
     // Register sync callback for offline manager
     useEffect(() => {
         offline.registerSyncCallback(async () => {
@@ -75,7 +61,6 @@ const App: React.FC = () => {
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
     // API fetch helper
     async function apiFetch(input: string, init: RequestInit = {}) {
         const headers = new Headers(init.headers || {});
@@ -91,7 +76,6 @@ const App: React.FC = () => {
         }
         return response;
     }
-
     // Load teams
     const loadTeams = async () => {
         if (!auth.authToken) return;
@@ -111,12 +95,10 @@ const App: React.FC = () => {
             console.error('Failed to load teams', err);
         }
     };
-
     useEffect(() => {
         if (auth.authUser && auth.authToken) loadTeams();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auth.authUser, auth.authToken]);
-
     // Load tasks when team changes
     useEffect(() => {
         const fetchTasks = async () => {
@@ -143,7 +125,6 @@ const App: React.FC = () => {
         fetchTasks();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTeamId]);
-
     // Fetch logs + restore timer after auth
     useEffect(() => {
         if (!auth.authUser) return;
@@ -151,7 +132,6 @@ const App: React.FC = () => {
         timer.restoreActiveTimer();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auth.authUser]);
-
     // Set team for user
     const setTeamForUser = async (teamId: number) => {
         try {
@@ -173,7 +153,6 @@ const App: React.FC = () => {
             alert('Error updating team. Check console.');
         }
     };
-
     // Render loading state
     if (!auth.isAuthReady) {
         return (
@@ -182,12 +161,10 @@ const App: React.FC = () => {
             </div>
         );
     }
-
     // Render login page if not authenticated
     if (!auth.authUser) {
         return <LoginPage />;
     }
-
     // Render main app
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -204,7 +181,6 @@ const App: React.FC = () => {
                 idleMinutes={timer.idleMinutes}
                 handleLogout={auth.handleLogout}
             />
-
             <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 space-y-3">
                 {/* Team Selector */}
                 <Card className="bg-slate-900/70 border-slate-800">
@@ -239,7 +215,6 @@ const App: React.FC = () => {
                         </div>
                     </CardContent>
                 </Card>
-
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={(val: string) => setActiveTab(val as TabId)}>
                     <TabsList className="grid w-full grid-cols-4 bg-slate-900/70 border border-slate-800">
@@ -256,7 +231,6 @@ const App: React.FC = () => {
                             Profile
                         </TabsTrigger>
                     </TabsList>
-
                     <TabsContent value="tracker">
                         <TrackerTab
                             tasks={tasks}
@@ -278,29 +252,23 @@ const App: React.FC = () => {
                             isDeletingId={timeLogs.isDeletingId}
                         />
                     </TabsContent>
-
                     <TabsContent value="dashboard">
                         <DashboardTab />
                     </TabsContent>
-
                     <TabsContent value="history">
                         <HistoryTab handleDownloadCSV={timeLogs.handleDownloadCSV} />
                     </TabsContent>
-
                     <TabsContent value="profile">
                         <ProfileTab
                             teams={teams}
                             selectedTeamId={selectedTeamId}
-                            setSelectedTeamId={setSelectedTeam
-
-Id}
-                        setTeamForUser={setTeamForUser}
-                        handleNotificationSettingsChange={notifications.handleNotificationSettingsChange}
+                            setSelectedTeamId={setSelectedTeamId}
+                            setTeamForUser={setTeamForUser}
+                            handleNotificationSettingsChange={notifications.handleNotificationSettingsChange}
                         />
                     </TabsContent>
                 </Tabs>
             </main>
-
             {/* Edit Modal */}
             <LogEditModal
                 editingLog={timeLogs.editingLog}
@@ -318,5 +286,4 @@ Id}
         </div>
     );
 };
-
 export default App;

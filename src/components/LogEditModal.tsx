@@ -39,6 +39,20 @@ export function LogEditModal({
             <Card className="w-full max-w-md bg-slate-900 border-slate-700">
                 <CardHeader>
                     <CardTitle className="text-sm">Edit Time Log</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                        <div className="text-xs text-slate-400">Date</div>
+                        <DatePicker
+                            value={editDate}
+                            onChange={(value) => setEditDate(value)}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-xs text-slate-400">Task</div>
+                        <select
+                            value={editTaskId}
+                            onChange={(e) => setEditTaskId(e.target.value === '' ? '' : Number(e.target.value))}
                             className="w-full bg-slate-950 border border-slate-700 rounded-md px-2 py-2 text-xs sm:text-sm"
                         >
                             <option value="">Select task…</option>
@@ -66,8 +80,8 @@ export function LogEditModal({
                             {isSavingEdit ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
-                </CardContent >
-            </Card >
-        </div >
+                </CardContent>
+            </Card>
+        </div>
     );
 }
