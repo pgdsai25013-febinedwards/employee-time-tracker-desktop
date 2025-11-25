@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import NotificationSettings from '../components/NotificationSettings';
+import { NotificationSettings } from '../components/NotificationSettings';
 
 interface ProfileTabProps {
     teams: Array<{ id: number; name: string }>;

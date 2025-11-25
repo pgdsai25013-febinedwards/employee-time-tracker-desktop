@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { offlineManager } from '../lib/offline-manager';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
@@ -8,7 +9,8 @@ export function useTimer(
     selectedTaskId: number | string,
     volumeInput: string,
     setVolumeInput: (value: string) => void,
-    fetchRecentLogs: () => Promise<void>
+    fetchRecentLogs: () => Promise<void>,
+    tasks: any[] = []
 ) {
     const [currentLogId, setCurrentLogId] = useState<number | null>(null);
     const [isStarting, setIsStarting] = useState(false);
@@ -20,7 +22,7 @@ export function useTimer(
     const timerStartAtRef = useRef<number | null>(null);
     const unsubscribeIdleRef = useRef<(() => void) | null>(null);
 
-    // API fetch helper (will need to pass this in or import)
+    // API fetch helper
     async function apiFetch(input: string, init: RequestInit = {}) {
         const headers = new Headers(init.headers || {});
         if (authToken) headers.set('Authorization', `Bearer ${authToken}`);
@@ -65,19 +67,10 @@ export function useTimer(
             }
 
             const unsubscribe = window.electronAPI?.onIdleTimeUpdate((systemIdleSeconds: number) => {
-                // Update current system idle state (for badge display)
                 setCurrentSystemIdle(systemIdleSeconds);
-
-                // System idle time is how long the OS has been idle
-                // If user is idle for more than 60 seconds, accumulate idle time
                 const IDLE_THRESHOLD = 60;
-
                 if (systemIdleSeconds >= IDLE_THRESHOLD) {
-                    // User is idle - accumulate idle time
                     setIdleSeconds(systemIdleSeconds);
-                } else {
-                    // User is active - don't reset accumulated idle, keep it for when we stop timer
-                    // The badge will show ACTIVE because currentSystemIdle < 60
                 }
             });
 
@@ -118,6 +111,32 @@ export function useTimer(
             alert('Please select a team and a task before starting the timer.');
             return;
         }
+
+        // Check for offline mode
+        if (!offlineManager.getOnlineStatus()) {
+            try {
+                const task = tasks.find((t: any) => t.id === Number(selectedTaskId));
+                const taskName = task ? task.name : 'Unknown Task';
+
+                const tempId = await offlineManager.startOfflineTimer({
+                    task_template_id: Number(selectedTaskId),
+                    task_name: taskName
+                });
+
+                setCurrentLogId(tempId);
+                timerStartAtRef.current = Date.now();
+                setElapsedSeconds(0);
+                setIdleSeconds(0);
+
+                await fetchRecentLogs();
+                alert('Timer started (Offline Mode).');
+            } catch (err) {
+                console.error('Error starting offline timer', err);
+                alert('Failed to start timer in offline mode.');
+            }
+            return;
+        }
+
         try {
             setIsStarting(true);
             const res = await apiFetch('/api/time-logs/start', {
@@ -156,10 +175,36 @@ export function useTimer(
             alert('No active timer found.');
             return;
         }
+
+        const volume = Number(volumeInput) || 0;
+        const idle_seconds = idleSeconds;
+
+        // Check for offline mode
+        if (!offlineManager.getOnlineStatus()) {
+            try {
+                await offlineManager.stopOfflineTimer({
+                    time_log_id: currentLogId,
+                    volume,
+                    idle_seconds
+                });
+
+                setCurrentLogId(null);
+                setVolumeInput('');
+                timerStartAtRef.current = null;
+                setElapsedSeconds(0);
+                setIdleSeconds(0);
+
+                await fetchRecentLogs();
+                alert('Timer stopped (Offline Mode). Changes will sync when online.');
+            } catch (err) {
+                console.error('Error stopping offline timer', err);
+                alert('Failed to stop timer in offline mode.');
+            }
+            return;
+        }
+
         try {
             setIsStopping(true);
-            const volume = Number(volumeInput) || 0;
-            const idle_seconds = idleSeconds;
             const res = await apiFetch('/api/time-logs/stop', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

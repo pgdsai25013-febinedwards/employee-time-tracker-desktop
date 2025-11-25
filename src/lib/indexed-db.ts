@@ -92,6 +92,21 @@ class IndexedDBManager {
     }
 
     // Cached Logs
+    async addCachedLog(log: CachedLog): Promise<number> {
+        if (!this.db) await this.init();
+        return this.db!.add('cachedLogs', log);
+    }
+
+    async updateCachedLog(log: CachedLog): Promise<number> {
+        if (!this.db) await this.init();
+        return this.db!.put('cachedLogs', log);
+    }
+
+    async removeCachedLog(id: number): Promise<void> {
+        if (!this.db) await this.init();
+        await this.db!.delete('cachedLogs', id);
+    }
+
     async cacheLogs(logs: CachedLog[]): Promise<void> {
         if (!this.db) await this.init();
         const tx = this.db!.transaction('cachedLogs', 'readwrite');

@@ -159,11 +159,21 @@ class NotificationManager {
             return;
         }
 
-        const notification = new Notification({
+        // Try to find icon in public folder (dev) or build resources
+        const iconName = 'tray-icon.png';
+        const iconPath = path.join(__dirname, '../public', iconName);
+        const fs = require('fs');
+
+        const notificationOptions = {
             title,
             body,
-            icon: path.join(__dirname, '../build/icon.png'),
-        });
+        };
+
+        if (fs.existsSync(iconPath)) {
+            notificationOptions.icon = iconPath;
+        }
+
+        const notification = new Notification(notificationOptions);
 
         notification.on('click', () => {
             if (this.window) {
@@ -194,7 +204,12 @@ function createWindow() {
             contextIsolation: true,
             nodeIntegration: false,
         },
-        icon: path.join(__dirname, '../build/icon.png'),
+        icon: (() => {
+            const iconName = 'tray-icon.png';
+            const iconPath = path.join(__dirname, '../public', iconName);
+            const fs = require('fs');
+            return fs.existsSync(iconPath) ? iconPath : undefined;
+        })(),
         backgroundColor: '#020617', // slate-950
     });
 
@@ -222,31 +237,45 @@ function createWindow() {
 
 // Create system tray icon
 function createTray() {
-    const iconPath = path.join(__dirname, '../build/icon.png');
-    tray = new Tray(iconPath);
+    try {
+        const iconName = 'tray-icon.png';
+        const iconPath = path.join(__dirname, '../public', iconName);
+        console.log('Attempting to load icon from:', iconPath);
 
-    const contextMenu = Menu.buildFromTemplate([
-        {
-            label: 'Show App',
-            click: () => {
-                mainWindow.show();
+        // Check if file exists
+        const fs = require('fs');
+        if (!fs.existsSync(iconPath)) {
+            console.error('Icon file does not exist at path:', iconPath);
+            return;
+        }
+
+        tray = new Tray(iconPath);
+
+        const contextMenu = Menu.buildFromTemplate([
+            {
+                label: 'Show App',
+                click: () => {
+                    mainWindow.show();
+                },
             },
-        },
-        {
-            label: 'Quit',
-            click: () => {
-                app.isQuitting = true;
-                app.quit();
+            {
+                label: 'Quit',
+                click: () => {
+                    app.isQuitting = true;
+                    app.quit();
+                },
             },
-        },
-    ]);
+        ]);
 
-    tray.setToolTip('Employee Time Tracker');
-    tray.setContextMenu(contextMenu);
+        tray.setToolTip('Employee Time Tracker');
+        tray.setContextMenu(contextMenu);
 
-    tray.on('click', () => {
-        mainWindow.show();
-    });
+        tray.on('click', () => {
+            mainWindow.show();
+        });
+    } catch (error) {
+        console.error('Failed to create tray:', error);
+    }
 }
 
 // App lifecycle

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { db } from '../lib/indexed-db';
+import { offlineManager } from '../lib/offline-manager';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
@@ -34,15 +36,45 @@ export function useTimeLogs(
 
     // Fetch recent logs
     async function fetchRecentLogs(days = 3) {
-        try {
-            const res = await apiFetch(`/api/time-logs/recent?days=${days}`);
-            if (!res.ok) {
-                console.error('Failed to fetch recent logs', res.status);
-                return;
+        let serverLogs: any[] = [];
+
+        // 1. Try to fetch from server if online
+        if (offlineManager.getOnlineStatus()) {
+            try {
+                const res = await apiFetch(`/api/time-logs/recent?days=${days}`);
+                if (res.ok) {
+                    serverLogs = await res.json();
+                }
+            } catch (err) {
+                console.error('Failed to fetch recent logs from server', err);
             }
-            const data = await res.json();
+        }
+
+        // 2. Get local cached logs
+        const localLogs = await db.getCachedLogs();
+
+        // 3. Merge logs
+        // Start with server logs, but override with local logs if they exist (for offline updates)
+        // And add local-only logs (negative IDs)
+        const mergedLogs = [...serverLogs];
+        const serverLogMap = new Map(serverLogs.map(l => [l.id, l]));
+
+        for (const local of localLogs) {
+            if (serverLogMap.has(local.id)) {
+                // Update existing server log with local version (e.g. stopped offline)
+                const index = mergedLogs.findIndex(l => l.id === local.id);
+                if (index !== -1) {
+                    mergedLogs[index] = local;
+                }
+            } else {
+                // Add new local log (e.g. started offline)
+                mergedLogs.push(local);
+            }
+        }
+
+        try {
             const byDate = new Map<string, any[]>();
-            for (const log of data) {
+            for (const log of mergedLogs) {
                 let dateKey = '';
                 try {
                     const d = new Date(log.work_date);
@@ -52,11 +84,9 @@ export function useTimeLogs(
                         const dd = String(d.getDate()).padStart(2, '0');
                         dateKey = `${yyyy}-${mm}-${dd}`;
                     } else {
-                        console.warn('Invalid work_date from backend:', log.work_date);
                         continue;
                     }
                 } catch {
-                    console.warn('Failed to parse work_date:', log.work_date);
                     continue;
                 }
 
@@ -94,7 +124,7 @@ export function useTimeLogs(
                 .sort((a, b) => (a.date < b.date ? 1 : -1));
             setDayGroups(grouped);
         } catch (err) {
-            console.error('Failed to load recent time logs', err);
+            console.error('Failed to process time logs', err);
         }
     }
 
