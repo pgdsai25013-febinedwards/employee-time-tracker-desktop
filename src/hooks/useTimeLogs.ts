@@ -178,6 +178,13 @@ export function useTimeLogs(
                 const volume = log.volume ?? 0;
                 const taskName = log.task_templates?.name ?? 'Unknown';
                 const taskTemplateId = log.task_templates?.id ?? log.task_template_id ?? null;
+                const workLocation = log.work_location ?? 'unknown';
+
+                // Debug: Log work location for first few entries
+                if (mergedLogs.indexOf(log) < 3) {
+                    console.log(`Log ${log.id}: work_location from API = "${log.work_location}", mapped to "${workLocation}"`);
+                }
+
                 const item = {
                     id: log.id,
                     workDate: log.work_date,
@@ -188,6 +195,7 @@ export function useTimeLogs(
                     idleMinutes,
                     durationMinutes,
                     volume,
+                    workLocation,
                 };
                 if (!byDate.has(dateKey)) byDate.set(dateKey, []);
                 byDate.get(dateKey)!.push(item);

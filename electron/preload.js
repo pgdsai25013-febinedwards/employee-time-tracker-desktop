@@ -44,6 +44,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
             ipcRenderer.removeListener('request-daily-stats', subscription);
         };
     },
+
+    // Check VPN status
+    checkVpnStatus: () => ipcRenderer.invoke('check-vpn-status'),
 });
 
 console.log('Preload script loaded');

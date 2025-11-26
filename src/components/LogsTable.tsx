@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit, Trash2, Building, Home, HelpCircle } from 'lucide-react';
 import { formatDateLabel } from '../lib/formatters';
 
 interface LogsTableProps {
@@ -12,7 +12,6 @@ interface LogsTableProps {
     deleteLog: (log: any) => Promise<void>;
     isDeletingId: number | null;
     pageIndex: number;
-    hasMore: boolean;
     goNextPage: () => Promise<void>;
     goPrevPage: () => Promise<void>;
     weekRange: string;
@@ -26,7 +25,7 @@ export function LogsTable({
     deleteLog,
     isDeletingId,
     pageIndex,
-    hasMore,
+
     goNextPage,
     goPrevPage,
     weekRange,
@@ -110,7 +109,21 @@ export function LogsTable({
                                                 const productive = Math.max(0, log.durationMinutes - log.idleMinutes);
                                                 return (
                                                     <TableRow key={log.id}>
-                                                        <TableCell className="text-[11px]">{log.taskName}</TableCell>
+                                                        <TableCell className="text-[11px]">
+                                                            <div className="font-medium text-slate-200 flex items-center gap-2">
+                                                                {log.taskName}
+                                                                {/* Work Location Icon */}
+                                                                {log.workLocation === 'office' && (
+                                                                    <span title="Office"><Building className="w-3 h-3 text-blue-400" /></span>
+                                                                )}
+                                                                {log.workLocation === 'wfh' && (
+                                                                    <span title="Work From Home"><Home className="w-3 h-3 text-green-400" /></span>
+                                                                )}
+                                                                {(!log.workLocation || log.workLocation === 'unknown') && (
+                                                                    <span title="Unknown Location"><HelpCircle className="w-3 h-3 text-slate-600" /></span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="text-[11px]">{log.start}</TableCell>
                                                         <TableCell className="text-[11px]">{log.end}</TableCell>
                                                         <TableCell className="text-[11px] text-right">{log.idleMinutes} min</TableCell>

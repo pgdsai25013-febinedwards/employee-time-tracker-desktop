@@ -139,10 +139,29 @@ export function useTimer(
 
         try {
             setIsStarting(true);
+
+            // Check work location (VPN detection)
+            let workLocation = 'unknown';
+            console.log('🔍 Checking VPN status...');
+            console.log('window.electronAPI available:', !!window.electronAPI);
+
+            if (window.electronAPI) {
+                try {
+                    const isVpnConnected = await window.electronAPI.checkVpnStatus();
+                    console.log('VPN detected:', isVpnConnected);
+                    workLocation = isVpnConnected ? 'wfh' : 'office';
+                    console.log('Work location set to:', workLocation);
+                } catch (error) {
+                    console.error('Error checking VPN status:', error);
+                }
+            } else {
+                console.warn('electronAPI not available - work location will be unknown');
+            }
+
             const res = await apiFetch('/api/time-logs/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task_template_id: selectedTaskId }),
+                body: JSON.stringify({ task_template_id: selectedTaskId, work_location: workLocation }),
             });
             if (!res.ok) {
                 let msg = 'Failed to start timer.';

@@ -382,4 +382,30 @@ ipcMain.on('daily-stats-response', (event, stats) => {
     }
 });
 
+// Check VPN status
+ipcMain.handle('check-vpn-status', () => {
+    try {
+        const os = require('os');
+        const interfaces = os.networkInterfaces();
+        const vpnKeywords = ['tun', 'tap', 'ppp', 'vpn', 'wireguard', 'tailscale', 'zerotier', 'secure'];
+
+        for (const name of Object.keys(interfaces)) {
+            const lowerName = name.toLowerCase();
+            // Check if interface name contains any VPN keyword
+            if (vpnKeywords.some(keyword => lowerName.includes(keyword))) {
+                // Check if interface is active and not internal
+                const iface = interfaces[name].find(details => !details.internal && details.family === 'IPv4');
+                if (iface) {
+                    console.log(`VPN detected on interface: ${name}`);
+                    return true;
+                }
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error('Error checking VPN status:', error);
+        return false;
+    }
+});
+
 console.log('Electron main process started');
