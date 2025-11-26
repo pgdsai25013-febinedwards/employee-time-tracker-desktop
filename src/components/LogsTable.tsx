@@ -11,6 +11,11 @@ interface LogsTableProps {
     openEditLog: (log: any) => void;
     deleteLog: (log: any) => Promise<void>;
     isDeletingId: number | null;
+    pageIndex: number;
+    hasMore: boolean;
+    goNextPage: () => Promise<void>;
+    goPrevPage: () => Promise<void>;
+    weekRange: string;
 }
 
 export function LogsTable({
@@ -20,17 +25,26 @@ export function LogsTable({
     openEditLog,
     deleteLog,
     isDeletingId,
+    pageIndex,
+    hasMore,
+    goNextPage,
+    goPrevPage,
+    weekRange,
 }: LogsTableProps) {
     return (
         <Card className="bg-slate-900/70 border-slate-800">
             <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm">Tasks recorded</CardTitle>
+                <div>
+                    <CardTitle className="text-sm">Tasks recorded</CardTitle>
+                    <p className="text-xs text-slate-400">{weekRange}</p>
+                </div>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                     <Button
                         size="icon"
                         variant="outline"
                         className="h-7 w-7 border-slate-700"
-                        onClick={() => alert('Paging not implemented in demo.')}
+                        onClick={goPrevPage}
+                        disabled={false}
                     >
                         <ChevronLeft className="h-3 w-3" />
                     </Button>
@@ -38,7 +52,8 @@ export function LogsTable({
                         size="icon"
                         variant="outline"
                         className="h-7 w-7 border-slate-700"
-                        onClick={() => alert('Paging not implemented in demo.')}
+                        onClick={goNextPage}
+                        disabled={pageIndex === 0}
                     >
                         <ChevronRight className="h-3 w-3" />
                     </Button>
@@ -46,7 +61,7 @@ export function LogsTable({
             </CardHeader>
             <CardContent className="space-y-2">
                 {dayGroups.length === 0 && (
-                    <div className="text-xs text-slate-500">No logs recorded for the last 3 days yet.</div>
+                    <div className="text-xs text-slate-500">No logs recorded for this week yet.</div>
                 )}
 
                 {dayGroups.map((day) => {

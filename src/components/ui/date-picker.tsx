@@ -3,17 +3,19 @@ import { Input } from "./input";
 
 interface DatePickerProps {
     value: string;
-    onChange: (value: string) => void;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder?: string;
+    className?: string;
 }
 
-export function DatePicker({ value, onChange, placeholder }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className }: DatePickerProps) {
     return (
         <Input
             type="date"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
             placeholder={placeholder}
+            className={className}
         />
     );
 }

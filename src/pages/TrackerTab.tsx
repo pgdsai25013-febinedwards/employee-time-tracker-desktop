@@ -21,6 +21,11 @@ interface TrackerTabProps {
     openEditLog: (log: any) => void;
     deleteLog: (log: any) => Promise<void>;
     isDeletingId: number | null;
+    pageIndex: number;
+    hasMore: boolean;
+    goNextPage: () => Promise<void>;
+    goPrevPage: () => Promise<void>;
+    weekRange: string;
 }
 
 export function TrackerTab(props: TrackerTabProps) {
@@ -46,6 +51,11 @@ export function TrackerTab(props: TrackerTabProps) {
                 openEditLog={props.openEditLog}
                 deleteLog={props.deleteLog}
                 isDeletingId={props.isDeletingId}
+                pageIndex={props.pageIndex}
+                hasMore={props.hasMore}
+                goNextPage={props.goNextPage}
+                goPrevPage={props.goPrevPage}
+                weekRange={props.weekRange}
             />
         </section>
     );

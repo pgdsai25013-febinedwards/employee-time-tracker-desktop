@@ -277,6 +277,11 @@ const App: React.FC = () => {
                             openEditLog={timeLogs.openEditLog}
                             deleteLog={timeLogs.deleteLog}
                             isDeletingId={timeLogs.isDeletingId}
+                            pageIndex={timeLogs.pageIndex}
+                            hasMore={timeLogs.hasMore}
+                            goNextPage={timeLogs.goNextPage}
+                            goPrevPage={timeLogs.goPrevPage}
+                            weekRange={timeLogs.weekRange}
                         />
                     </TabsContent>
 
