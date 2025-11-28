@@ -10,12 +10,36 @@ const app = express();
 
 // ---------- Middleware ----------
 app.use(express.json());
+
+// Enhanced CORS - includes Electron app and Render backend
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "https://employee-timetracker.netlify.app",
+  "https://employee-time-tracker-desktop.onrender.com",
+  /^file:\/\//,  // Electron apps (file:// protocol)
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://employee-timetracker.netlify.app",   // your real Netlify site
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') return allowed === origin;
+        if (allowed instanceof RegExp) return allowed.test(origin);
+        return false;
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️ CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -39,6 +63,12 @@ const pool = new Pool({
 // ---------- Google + JWT ----------
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "");
 
+// Validate JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.warn("⚠️ JWT_SECRET is missing! Using insecure fallback. Set JWT_SECRET in production!");
+  return "dev_secret_INSECURE";
+})();
+
 function createAppToken(user) {
   return jwt.sign(
     {
@@ -47,7 +77,7 @@ function createAppToken(user) {
       role: user.role,
       team_id: user.team_id,
     },
-    process.env.JWT_SECRET || "dev_secret",
+    JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
   );
 }
@@ -59,7 +89,7 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ error: "Missing or invalid Authorization header" });
   }
   try {
-    req.user = jwt.verify(parts[1], process.env.JWT_SECRET || "dev_secret");
+    req.user = jwt.verify(parts[1], JWT_SECRET);
     next();
   } catch (err) {
     console.error("JWT verify error:", err);
@@ -83,14 +113,31 @@ async function isMonthLocked(teamId, workDate) {
   return result.rows.length > 0;
 }
 
+// ---------- Root Route ----------
+app.get("/", (req, res) => {
+  res.json({
+    message: "Employee Time Tracker API is running",
+    version: "1.0.0",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // ---------- Health ----------
 app.get("/api/health", async (req, res) => {
   try {
-    await pool.query("SELECT 1");
-    return res.json({ status: "ok" });
+    const result = await pool.query("SELECT NOW() as db_time");
+    return res.json({
+      status: "ok",
+      database: "connected",
+      db_time: result.rows[0].db_time
+    });
   } catch (err) {
     console.error("Healthcheck DB error:", err);
-    return res.status(500).json({ error: "DB not reachable" });
+    return res.status(500).json({
+      status: "error",
+      database: "disconnected",
+      error: "DB not reachable"
+    });
   }
 });
 
@@ -530,5 +577,18 @@ app.post("/api/month-locks/unlock", authMiddleware, async (req, res) => {
   }
 });
 
+// ---------- Startup: Validate DB Connection ----------
+pool.query("SELECT NOW() as now")
+  .then((result) => {
+    console.log("✅ Connected to Postgres at:", result.rows[0].now);
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to Postgres:", err.message);
+    console.error("Check your DATABASE_URL environment variable");
+  });
+
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
