@@ -3,7 +3,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Play, Square } from 'lucide-react';
 
-type Task = { id: number; team_id: number; name: string };
+type Task = {
+    id: number;
+    team_id: number;
+    name: string;
+    category_id?: number;
+    category_name?: string;
+    category_description?: string;
+};
 
 interface TimerControlsProps {
     tasks: Task[];
@@ -32,6 +39,25 @@ export function TimerControls({
     handleStartTimer,
     handleStopTimer,
 }: TimerControlsProps) {
+    // Group tasks by category
+    const groupedTasks = tasks.reduce((acc, task) => {
+        const category = task.category_name || 'Uncategorized';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(task);
+        return acc;
+    }, {} as Record<string, Task[]>);
+
+    // Sort categories: Core, Non-Core, Unproductive, then others
+    const categoryOrder = ['core', 'non-core', 'unproductive'];
+    const sortedCategories = Object.keys(groupedTasks).sort((a, b) => {
+        const indexA = categoryOrder.indexOf(a.toLowerCase());
+        const indexB = categoryOrder.indexOf(b.toLowerCase());
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
     return (
         <Card className="bg-slate-900/70 border-slate-800">
             <CardHeader className="pb-2">
@@ -48,10 +74,14 @@ export function TimerControls({
                             disabled={!selectedTeamId || isTimerActive}
                         >
                             <option value="">{selectedTeamId ? 'Select task…' : 'Select a team first…'}</option>
-                            {tasks.map((task) => (
-                                <option key={task.id} value={task.id}>
-                                    {task.name}
-                                </option>
+                            {sortedCategories.map((category) => (
+                                <optgroup key={category} label={category.charAt(0).toUpperCase() + category.slice(1)}>
+                                    {groupedTasks[category].map((task) => (
+                                        <option key={task.id} value={task.id}>
+                                            {task.name}
+                                        </option>
+                                    ))}
+                                </optgroup>
                             ))}
                         </select>
                         <div className="text-[10px] text-slate-500">Task list based on the team you selected.</div>

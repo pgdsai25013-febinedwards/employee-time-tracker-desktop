@@ -29,11 +29,33 @@ class IdleManager {
 
         this.heartbeatInterval = null;
         this.processStartTime = Date.now();
+        this.rendererReady = false;
+        this.pendingIdleEvents = [];
 
         // Initialize or get instance ID
         this.initializeInstanceId();
 
         console.log('🔧 IdleManager initialized with instance ID:', this.getInstanceId());
+    }
+
+    /**
+     * Flag renderer readiness so queued events can flush
+     */
+    setRendererReady(isReady) {
+        this.rendererReady = isReady;
+        if (isReady) {
+            this.flushPendingIdleEvents();
+        }
+    }
+
+    /**
+     * Flush any stored idle events once renderer subscribes
+     */
+    flushPendingIdleEvents() {
+        if (!this.pendingIdleEvents.length) return;
+        const events = [...this.pendingIdleEvents];
+        this.pendingIdleEvents = [];
+        events.forEach((event) => this.sendIdleEventToRenderer(event));
     }
 
     /**
@@ -294,12 +316,14 @@ class IdleManager {
      * Send idle event to renderer process via IPC
      */
     sendIdleEventToRenderer(idleEvent) {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-            console.log('📤 Sending idle event to renderer:', idleEvent);
-            this.mainWindow.webContents.send('timer:idle-event', idleEvent);
-        } else {
-            console.warn('⚠️ Cannot send idle event - window not available');
+        if (!this.mainWindow || this.mainWindow.isDestroyed() || !this.rendererReady) {
+            console.warn('⚠️ Renderer not ready - queuing idle event');
+            this.pendingIdleEvents.push(idleEvent);
+            return;
         }
+
+        console.log('📤 Sending idle event to renderer:', idleEvent);
+        this.mainWindow.webContents.send('timer:idle-event', idleEvent);
     }
 
     /**

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -10,7 +11,13 @@ interface DashboardTabProps {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export function DashboardTab({ authToken }: DashboardTabProps) {
-    const { metrics, dailyActivity, taskDistribution, locationData, isLoading, targetHours, setTargetHours } = useDashboardData(authToken);
+    const { metrics, dailyActivity, taskDistribution, categoryDistribution, locationData, isLoading, targetHours, setTargetHours } = useDashboardData(authToken);
+    const [chartsReady, setChartsReady] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setChartsReady(true), 200);
+        return () => clearTimeout(timer);
+    }, []);
 
     if (isLoading) {
         return (
@@ -103,46 +110,88 @@ export function DashboardTab({ authToken }: DashboardTabProps) {
                     <CardHeader>
                         <CardTitle className="text-sm font-medium text-slate-300">Daily Activity Trend (Last 7 Days)</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dailyActivity}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    itemStyle={{ color: '#f8fafc' }}
-                                    cursor={{ fill: '#334155', opacity: 0.4 }}
-                                />
-                                <Legend />
-                                <Bar dataKey="hours" name="Total Hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="productive" name="Productive Hours" fill="#10b981" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            {chartsReady && (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
+                                    <BarChart data={dailyActivity}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                            itemStyle={{ color: '#f8fafc' }}
+                                            cursor={{ fill: '#334155', opacity: 0.4 }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="hours" name="Total Hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="productive" name="Productive Hours" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Category Distribution */}
+                <Card className="bg-slate-900/70 border-slate-800">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-slate-300">Time by Category</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            {chartsReady && (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
+                                    <PieChart>
+                                        <Pie
+                                            data={categoryDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {categoryDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* Task Distribution */}
                 <Card className="bg-slate-900/70 border-slate-800">
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium text-slate-300">Task Distribution (Top 5)</CardTitle>
+                        <CardTitle className="text-sm font-medium text-slate-300">Top Tasks</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={taskDistribution}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                                <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis dataKey="name" type="category" width={100} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                    cursor={{ fill: '#334155', opacity: 0.4 }}
-                                />
-                                <Bar dataKey="value" name="Hours" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            {chartsReady && (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
+                                    <BarChart layout="vertical" data={taskDistribution}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+                                        <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis dataKey="name" type="category" width={100} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                            cursor={{ fill: '#334155', opacity: 0.4 }}
+                                        />
+                                        <Bar dataKey="value" name="Hours" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -151,28 +200,32 @@ export function DashboardTab({ authToken }: DashboardTabProps) {
                     <CardHeader>
                         <CardTitle className="text-sm font-medium text-slate-300">Work Location</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={locationData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {locationData.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                                />
-                                <Legend verticalAlign="bottom" height={36} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            {chartsReady && (
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
+                                    <PieChart>
+                                        <Pie
+                                            data={locationData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {locationData.map((_, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>

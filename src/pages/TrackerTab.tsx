@@ -1,7 +1,14 @@
 import { TimerControls } from '../components/TimerControls';
 import { LogsTable } from '../components/LogsTable';
 
-type Task = { id: number; team_id: number; name: string };
+type Task = {
+    id: number;
+    team_id: number;
+    name: string;
+    category_id?: number;
+    category_name?: string;
+    category_description?: string;
+};
 
 interface TrackerTabProps {
     tasks: Task[];

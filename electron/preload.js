@@ -65,6 +65,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
             ipcRenderer.removeListener('timer:idle-event', subscription);
         };
     },
+
+    // Notify main process once renderer is ready to receive events
+    rendererReady: () => ipcRenderer.send('renderer-ready'),
 });
 
 console.log('Preload script loaded');

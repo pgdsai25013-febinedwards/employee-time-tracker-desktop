@@ -239,13 +239,37 @@ app.post("/api/users/set-team", authMiddleware, async (req, res) => {
   }
 });
 
+// ---------- Categories ----------
+app.get("/api/categories", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT id, name, description FROM categories ORDER BY id");
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    return res.status(500).json({ error: "Failed to load categories" });
+  }
+});
+
 // ---------- Tasks ----------
 app.get("/api/tasks", authMiddleware, async (req, res) => {
   const { team_id } = req.query;
   if (!team_id) return res.status(400).json({ error: "team_id required" });
 
   try {
-    const result = await pool.query("SELECT id, team_id, name FROM task_templates WHERE team_id=$1 ORDER BY name", [team_id]);
+    const result = await pool.query(
+      `SELECT 
+        tt.id, 
+        tt.team_id, 
+        tt.name, 
+        tt.category_id,
+        c.name AS category_name,
+        c.description AS category_description
+       FROM task_templates tt
+       LEFT JOIN categories c ON tt.category_id = c.id
+       WHERE tt.team_id = $1 AND tt.is_active = true
+       ORDER BY c.name, tt.name`,
+      [team_id]
+    );
     return res.json(result.rows);
   } catch (err) {
     console.error("Error fetching tasks:", err);
@@ -395,9 +419,17 @@ app.get("/api/time-logs/recent", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT tl.*, json_build_object('id', tt.id, 'name', tt.name) AS task_templates
+      `SELECT tl.*, 
+         json_build_object(
+           'id', tt.id, 
+           'name', tt.name,
+           'category_id', tt.category_id,
+           'category_name', c.name,
+           'category_description', c.description
+         ) AS task_templates
        FROM time_logs tl
        LEFT JOIN task_templates tt ON tl.task_template_id = tt.id
+       LEFT JOIN categories c ON tt.category_id = c.id
        WHERE ${where.join(" AND ")}
        ORDER BY tl.work_date DESC, tl.started_at DESC`,
       params
@@ -432,9 +464,17 @@ app.get("/api/time-logs/filter", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT tl.*, json_build_object('id', tt.id, 'name', tt.name) AS task_templates
+      `SELECT tl.*, 
+         json_build_object(
+           'id', tt.id, 
+           'name', tt.name,
+           'category_id', tt.category_id,
+           'category_name', c.name,
+           'category_description', c.description
+         ) AS task_templates
        FROM time_logs tl
        LEFT JOIN task_templates tt ON tl.task_template_id = tt.id
+       LEFT JOIN categories c ON tt.category_id = c.id
        WHERE ${where.join(" AND ")}
        ORDER BY tl.work_date DESC, tl.started_at DESC`,
       params

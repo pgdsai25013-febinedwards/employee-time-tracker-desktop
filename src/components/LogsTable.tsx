@@ -4,6 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { ChevronLeft, ChevronRight, Edit, Trash2, Building, Home, HelpCircle } from 'lucide-react';
 import { formatDateLabel } from '../lib/formatters';
 
+import { CategoryBadge } from './CategoryBadge';
+
 interface LogsTableProps {
     dayGroups: any[];
     openDays: Record<string, boolean>;
@@ -15,6 +17,7 @@ interface LogsTableProps {
     goNextPage: () => Promise<void>;
     goPrevPage: () => Promise<void>;
     weekRange: string;
+    hasMore?: boolean; // Fix lint error
 }
 
 export function LogsTable({
@@ -110,8 +113,11 @@ export function LogsTable({
                                                 return (
                                                     <TableRow key={log.id}>
                                                         <TableCell className="text-[11px]">
-                                                            <div className="font-medium text-slate-200 flex items-center gap-2">
-                                                                {log.taskName}
+                                                            <div className="font-medium text-slate-200 flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    {log.taskName}
+                                                                    <CategoryBadge categoryName={log.categoryName} size="sm" />
+                                                                </div>
                                                                 {/* Work Location Icon */}
                                                                 {log.workLocation === 'office' && (
                                                                     <span title="Office"><Building className="w-3 h-3 text-blue-400" /></span>

@@ -178,6 +178,7 @@ export function useTimeLogs(
                 const volume = log.volume ?? 0;
                 const taskName = log.task_templates?.name ?? 'Unknown';
                 const taskTemplateId = log.task_templates?.id ?? log.task_template_id ?? null;
+                const categoryName = log.task_templates?.category_name;
                 const workLocation = log.work_location ?? 'unknown';
 
                 // Debug: Log work location for first few entries
@@ -190,6 +191,7 @@ export function useTimeLogs(
                     workDate: log.work_date,
                     taskTemplateId,
                     taskName,
+                    categoryName,
                     start: startLabel,
                     end: endLabel,
                     idleMinutes,

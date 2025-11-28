@@ -30,6 +30,12 @@ export interface WorkLocationData {
     [key: string]: any;
 }
 
+export interface CategoryDistribution {
+    name: string;
+    value: number; // hours
+    color: string;
+}
+
 export function useDashboardData(authToken: string | null) {
     const [metrics, setMetrics] = useState<DashboardMetrics>({
         totalHours: 0,
@@ -41,6 +47,7 @@ export function useDashboardData(authToken: string | null) {
     });
     const [dailyActivity, setDailyActivity] = useState<DailyActivity[]>([]);
     const [taskDistribution, setTaskDistribution] = useState<TaskDistribution[]>([]);
+    const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
     const [locationData, setLocationData] = useState<WorkLocationData[]>([]);
     const [targetHours, setTargetHours] = useState<number>(8.0);
     const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +120,11 @@ export function useDashboardData(authToken: string | null) {
         let wfhCount = 0;
         let officeCount = 0;
         const taskHours: Record<string, number> = {};
+        const categoryHours: Record<string, number> = {
+            'core': 0,
+            'non-core': 0,
+            'unproductive': 0
+        };
         const dailyMap: Record<string, { total: number, idle: number }> = {};
 
         logs.forEach(log => {
@@ -120,6 +132,7 @@ export function useDashboardData(authToken: string | null) {
             const idle = log.idle_seconds || 0;
             // const productive = Math.max(0, duration - idle); // Unused
             const taskName = log.task_templates?.name || log.task_name || 'Unknown';
+            const categoryName = (log.task_templates?.category_name || 'unknown').toLowerCase();
             const location = log.work_location;
             const date = log.work_date ? log.work_date.split('T')[0] : '';
 
@@ -129,6 +142,15 @@ export function useDashboardData(authToken: string | null) {
             // Task Distribution
             if (!taskHours[taskName]) taskHours[taskName] = 0;
             taskHours[taskName] += duration;
+
+            // Category Distribution
+            if (categoryHours[categoryName] !== undefined) {
+                categoryHours[categoryName] += duration;
+            } else {
+                // Handle unknown categories if any
+                if (!categoryHours['other']) categoryHours['other'] = 0;
+                categoryHours['other'] += duration;
+            }
 
             // Location
             if (location === 'wfh') wfhCount++;
@@ -196,6 +218,24 @@ export function useDashboardData(authToken: string | null) {
             .slice(0, 5);
         setTaskDistribution(taskDistData);
 
+        // Charts: Category Distribution
+        const categoryColors: Record<string, string> = {
+            'core': '#10b981', // Green
+            'non-core': '#3b82f6', // Blue
+            'unproductive': '#64748b', // Slate
+            'other': '#a8a29e' // Stone
+        };
+
+        const categoryDistData = Object.entries(categoryHours)
+            .filter(([_, seconds]) => seconds > 0)
+            .map(([name, seconds]) => ({
+                name: name.charAt(0).toUpperCase() + name.slice(1),
+                value: Math.round(seconds / 3600 * 10) / 10,
+                color: categoryColors[name] || '#cbd5e1'
+            }))
+            .sort((a, b) => b.value - a.value);
+        setCategoryDistribution(categoryDistData);
+
         // Charts: Location
         setLocationData([
             { name: 'WFH', value: wfhCount },
@@ -213,6 +253,7 @@ export function useDashboardData(authToken: string | null) {
         metrics,
         dailyActivity,
         taskDistribution,
+        categoryDistribution,
         locationData,
         isLoading,
         targetHours,

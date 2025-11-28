@@ -21,7 +21,14 @@ import { DashboardTab } from './pages/DashboardTab';
 import { HistoryTab } from './pages/HistoryTab';
 import { ProfileTab } from './pages/ProfileTab';
 type Team = { id: number; name: string };
-type Task = { id: number; team_id: number; name: string };
+type Task = {
+    id: number;
+    team_id: number;
+    name: string;
+    category_id?: number;
+    category_name?: string;
+    category_description?: string;
+};
 type TabId = 'tracker' | 'dashboard' | 'history' | 'profile';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
