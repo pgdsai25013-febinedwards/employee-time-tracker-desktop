@@ -1,11 +1,13 @@
 const { app, BrowserWindow, ipcMain, powerMonitor, Tray, Menu, Notification } = require('electron');
 const path = require('path');
+const IdleManager = require('./idleManager');
 const isDev = !app.isPackaged;
 
 let mainWindow = null;
 let tray = null;
 let idleCheckInterval = null;
 let notificationManager = null;
+let idleManager = null;
 
 // ==================== NOTIFICATION MANAGER ====================
 class NotificationManager {
@@ -288,6 +290,10 @@ app.whenReady().then(() => {
     notificationManager.startActivityCheck();
     notificationManager.scheduleEndOfDay();
 
+    // Initialize idle manager (after app is ready, powerMonitor is available)
+    idleManager = new IdleManager(mainWindow);
+    idleManager.initialize(powerMonitor);
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
@@ -304,6 +310,9 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
     if (notificationManager) {
         notificationManager.cleanup();
+    }
+    if (idleManager) {
+        idleManager.cleanup();
     }
 });
 
@@ -383,28 +392,160 @@ ipcMain.on('daily-stats-response', (event, stats) => {
 });
 
 // Check VPN status
-ipcMain.handle('check-vpn-status', () => {
+// Check VPN status
+ipcMain.handle('check-vpn-status', async () => {
     try {
+        const util = require('util');
+        const exec = util.promisify(require('child_process').exec);
         const os = require('os');
-        const interfaces = os.networkInterfaces();
-        const vpnKeywords = ['tun', 'tap', 'ppp', 'vpn', 'wireguard', 'tailscale', 'zerotier', 'secure'];
 
-        for (const name of Object.keys(interfaces)) {
-            const lowerName = name.toLowerCase();
-            // Check if interface name contains any VPN keyword
-            if (vpnKeywords.some(keyword => lowerName.includes(keyword))) {
-                // Check if interface is active and not internal
-                const iface = interfaces[name].find(details => !details.internal && details.family === 'IPv4');
-                if (iface) {
-                    console.log(`VPN detected on interface: ${name}`);
-                    return true;
+        // 1. Check Network Interfaces (Enhanced)
+        const checkInterfaces = () => {
+            const interfaces = os.networkInterfaces();
+            const vpnKeywords = ['tun', 'tap', 'wintun', 'openvpn', 'wireguard', 'wg', 'zscaler', 'z-tunnel'];
+
+            for (const name of Object.keys(interfaces)) {
+                const lowerName = name.toLowerCase();
+                if (vpnKeywords.some(keyword => lowerName.includes(keyword))) {
+                    const iface = interfaces[name].find(details =>
+                        !details.internal &&
+                        details.family === 'IPv4' &&
+                        details.address !== '0.0.0.0'
+                    );
+                    if (iface) {
+                        console.log(`VPN detected on interface: ${name}`);
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
+            return false;
+        };
+
+        // 2. Check Zscaler Services
+        const checkZscalerServices = async () => {
+            try {
+                const { stdout } = await exec('tasklist /FI "IMAGENAME eq ZscalerTunnel.exe" /FI "IMAGENAME eq ZSATrayManager.exe" /FI "IMAGENAME eq ZscalerService.exe" /FI "IMAGENAME eq ZSATunnel.exe"');
+                return stdout.includes('ZscalerTunnel') || stdout.includes('ZSATrayManager') || stdout.includes('ZscalerService') || stdout.includes('ZSATunnel');
+            } catch (e) {
+                console.error('Error checking Zscaler services:', e);
+                return false;
+            }
+        };
+
+        // 3. Check System Proxy (PAC)
+        const checkSystemProxy = async () => {
+            try {
+                const { stdout } = await exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v AutoConfigURL');
+                const lower = stdout.toLowerCase();
+                return lower.includes('zscaler') || lower.includes('pac') || lower.includes('wpad');
+            } catch (e) {
+                // Registry key might not exist if no PAC is configured
+                return false;
+            }
+        };
+
+        // 4. Check Zscaler Root Certificate
+        const checkZscalerCert = async () => {
+            try {
+                // This command lists all root certs, we grep for Zscaler
+                const { stdout } = await exec('certutil -store root');
+                return stdout.toLowerCase().includes('zscaler');
+            } catch (e) {
+                console.error('Error checking certificates:', e);
+                return false;
+            }
+        };
+
+        // Run checks
+        // We run interface check first as it's fastest
+        if (checkInterfaces()) return true;
+
+        // Run system checks in parallel
+        const [services, proxy, cert] = await Promise.all([
+            checkZscalerServices(),
+            checkSystemProxy(),
+            checkZscalerCert()
+        ]);
+
+        if (services) console.log('Zscaler services detected');
+        if (proxy) console.log('Zscaler proxy configuration detected');
+        if (cert) console.log('Zscaler root certificate detected');
+
+        return services || proxy || cert;
+
     } catch (error) {
         console.error('Error checking VPN status:', error);
         return false;
+    }
+});
+
+// ==================== IDLE TRACKING IPC HANDLERS ====================
+
+// Start timer tracking
+ipcMain.handle('timer:start', async (event, timerData) => {
+    try {
+        if (idleManager) {
+            idleManager.startTracking(timerData);
+            return { success: true, instanceId: idleManager.getInstanceId() };
+        }
+        return { success: false, error: 'Idle manager not initialized' };
+    } catch (error) {
+        console.error('Error starting timer tracking:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Stop timer tracking
+ipcMain.handle('timer:stop', async (event, logId) => {
+    try {
+        if (idleManager) {
+            idleManager.stopTracking();
+            return { success: true };
+        }
+        return { success: false, error: 'Idle manager not initialized' };
+    } catch (error) {
+        console.error('Error stopping timer tracking:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Get timer status
+ipcMain.handle('timer:status', async () => {
+    try {
+        if (idleManager) {
+            return idleManager.getStatus();
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting timer status:', error);
+        return null;
+    }
+});
+
+// Manual reconciliation trigger
+ipcMain.handle('timer:reconcile', async () => {
+    try {
+        if (idleManager) {
+            const result = idleManager.reconcileTimestamps();
+            return result || { reconciled: false, message: 'No reconciliation needed' };
+        }
+        return { reconciled: false, error: 'Idle manager not initialized' };
+    } catch (error) {
+        console.error('Error reconciling timestamps:', error);
+        return { reconciled: false, error: error.message };
+    }
+});
+
+// Get instance ID
+ipcMain.handle('timer:get-instance-id', async () => {
+    try {
+        if (idleManager) {
+            return { instanceId: idleManager.getInstanceId() };
+        }
+        return { instanceId: null };
+    } catch (error) {
+        console.error('Error getting instance ID:', error);
+        return { instanceId: null };
     }
 });
 

@@ -47,6 +47,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Check VPN status
     checkVpnStatus: () => ipcRenderer.invoke('check-vpn-status'),
+
+    // ==================== IDLE TRACKING APIs ====================
+
+    // Timer lifecycle
+    timerStart: (timerData) => ipcRenderer.invoke('timer:start', timerData),
+    timerStop: (logId) => ipcRenderer.invoke('timer:stop', logId),
+    timerStatus: () => ipcRenderer.invoke('timer:status'),
+    timerReconcile: () => ipcRenderer.invoke('timer:reconcile'),
+    timerGetInstanceId: () => ipcRenderer.invoke('timer:get-instance-id'),
+
+    // Listen for idle events from main process
+    onIdleEvent: (callback) => {
+        const subscription = (event, data) => callback(data);
+        ipcRenderer.on('timer:idle-event', subscription);
+        return () => {
+            ipcRenderer.removeListener('timer:idle-event', subscription);
+        };
+    },
 });
 
 console.log('Preload script loaded');

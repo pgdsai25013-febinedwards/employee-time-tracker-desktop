@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix for date picker icon in dark mode */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -53,6 +60,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }

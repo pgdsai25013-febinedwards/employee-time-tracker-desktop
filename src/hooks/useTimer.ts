@@ -18,9 +18,11 @@ export function useTimer(
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [idleSeconds, setIdleSeconds] = useState(0);
     const [currentSystemIdle, setCurrentSystemIdle] = useState(0);
+    const [instanceId, setInstanceId] = useState<string | null>(null);
 
     const timerStartAtRef = useRef<number | null>(null);
     const unsubscribeIdleRef = useRef<(() => void) | null>(null);
+    const unsubscribeIdleEventRef = useRef<(() => void) | null>(null);
 
     // API fetch helper
     async function apiFetch(input: string, init: RequestInit = {}) {
@@ -53,10 +55,81 @@ export function useTimer(
             const diff = Math.floor((Date.now() - startedAtMs) / 1000);
             setElapsedSeconds(diff > 0 ? diff : 0);
             setIdleSeconds(active.idle_seconds ?? 0);
+
+            // Start idle tracking for restored timer
+            if (window.electronAPI?.timerStart) {
+                await window.electronAPI.timerStart({ logId: active.id, taskId: active.task_template_id });
+            }
         } catch (err) {
             console.error('Failed to restore active timer', err);
         }
     };
+
+    // Reconcile timestamps on component mount (handle crash/shutdown recovery)
+    useEffect(() => {
+        const runReconciliation = async () => {
+            if (window.electronAPI?.timerReconcile) {
+                console.log('🔍 Running timestamp reconciliation on mount...');
+                const result = await window.electronAPI.timerReconcile();
+                if (result?.gapDetected) {
+                    console.log('⚠️ Gap detected during reconciliation:', result);
+                    // Idle event will be sent via onIdleEvent listener
+                }
+            }
+
+            // Get instance ID
+            if (window.electronAPI?.timerGetInstanceId) {
+                const { instanceId: id } = await window.electronAPI.timerGetInstanceId();
+                setInstanceId(id);
+                console.log('📱 Instance ID:', id);
+            }
+        };
+
+        runReconciliation();
+    }, []); // Run once on mount
+
+    // Subscribe to idle events from main process
+    useEffect(() => {
+        if (!window.electronAPI?.onIdleEvent) return;
+
+        const unsubscribe = window.electronAPI.onIdleEvent(async (idleEvent) => {
+            console.log('🚨 Idle event received:', idleEvent);
+
+            const { idleSeconds: idle, source, clockTampering } = idleEvent;
+            const minutes = Math.floor(idle / 60);
+            const seconds = idle % 60;
+
+            let message = `You were away for ${minutes}m ${seconds}s`;
+            if (source === 'lock') message = `System was locked for ${minutes}m ${seconds}s`;
+            else if (source === 'suspend') message = `System went to sleep for ${minutes}m ${seconds}s`;
+            else if (source === 'shutdown') message = `System was off for ${minutes}m ${seconds}s`;
+
+            if (clockTampering) {
+                message += ' ⚠️ Clock tampering detected!';
+            }
+
+            alert(`${message}\n\nTimer has been stopped and ${minutes} minutes of idle time recorded.`);
+
+            // Refresh logs to show updated data
+            await fetchRecentLogs();
+
+            // Clear timer state
+            setCurrentLogId(null);
+            setVolumeInput('');
+            timerStartAtRef.current = null;
+            setElapsedSeconds(0);
+            setIdleSeconds(0);
+        });
+
+        unsubscribeIdleEventRef.current = unsubscribe;
+
+        return () => {
+            if (unsubscribeIdleEventRef.current) {
+                unsubscribeIdleEventRef.current();
+                unsubscribeIdleEventRef.current = null;
+            }
+        };
+    }, [fetchRecentLogs, setVolumeInput]);
 
     // Electron idle monitoring
     useEffect(() => {
@@ -161,7 +234,11 @@ export function useTimer(
             const res = await apiFetch('/api/time-logs/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task_template_id: selectedTaskId, work_location: workLocation }),
+                body: JSON.stringify({
+                    task_template_id: selectedTaskId,
+                    work_location: workLocation,
+                    instance_id: instanceId // Include instance ID for backend validation
+                }),
             });
             if (!res.ok) {
                 let msg = 'Failed to start timer.';
@@ -179,6 +256,16 @@ export function useTimer(
             const diff = Math.floor((Date.now() - startedAtMs) / 1000);
             setElapsedSeconds(diff > 0 ? diff : 0);
             setIdleSeconds(0);
+
+            // Start idle tracking in Electron
+            if (window.electronAPI?.timerStart) {
+                await window.electronAPI.timerStart({
+                    logId: data.log.id,
+                    taskId: selectedTaskId
+                });
+                console.log('✅ Idle tracking started for log:', data.log.id);
+            }
+
             await fetchRecentLogs();
         } catch (err) {
             console.error('Error starting timer', err);
@@ -239,6 +326,13 @@ export function useTimer(
                 return;
             }
             await res.json();
+
+            // Stop idle tracking in Electron
+            if (window.electronAPI?.timerStop) {
+                await window.electronAPI.timerStop(currentLogId);
+                console.log('✅ Idle tracking stopped for log:', currentLogId);
+            }
+
             setCurrentLogId(null);
             setVolumeInput('');
             timerStartAtRef.current = null;

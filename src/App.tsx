@@ -20,7 +20,6 @@ import { TrackerTab } from './pages/TrackerTab';
 import { DashboardTab } from './pages/DashboardTab';
 import { HistoryTab } from './pages/HistoryTab';
 import { ProfileTab } from './pages/ProfileTab';
-
 type Team = { id: number; name: string };
 type Task = { id: number; team_id: number; name: string };
 type TabId = 'tracker' | 'dashboard' | 'history' | 'profile';
@@ -251,7 +250,7 @@ const App: React.FC = () => {
                             Dashboard
                         </TabsTrigger>
                         <TabsTrigger value="history" className="text-xs sm:text-sm">
-                            History
+                            Reports
                         </TabsTrigger>
                         <TabsTrigger value="profile" className="text-xs sm:text-sm">
                             Profile
@@ -286,7 +285,7 @@ const App: React.FC = () => {
                     </TabsContent>
 
                     <TabsContent value="dashboard">
-                        <DashboardTab />
+                        <DashboardTab authToken={auth.authToken} />
                     </TabsContent>
 
                     <TabsContent value="history">

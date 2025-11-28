@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Play, Square } from 'lucide-react';
 
 type Task = { id: number; team_id: number; name: string };
 
@@ -69,19 +70,27 @@ export function TimerControls({
 
                     <div className="flex gap-2 justify-end">
                         <Button
-                            className="bg-emerald-500 hover:bg-emerald-600 text-xs sm:text-sm"
-                            disabled={selectedTaskId === '' || !selectedTeamId || isStarting || isTimerActive}
-                            onClick={handleStartTimer}
+                            className={`transition-all duration-300 min-w-[140px] gap-2 ${isTimerActive
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                }`}
+                            disabled={
+                                (!isTimerActive && (selectedTaskId === '' || !selectedTeamId || isStarting)) ||
+                                (isTimerActive && isStopping)
+                            }
+                            onClick={isTimerActive ? handleStopTimer : handleStartTimer}
                         >
-                            {isStarting ? 'Starting…' : 'Start timer'}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="border-slate-700 text-xs sm:text-sm"
-                            disabled={!isTimerActive || isStopping}
-                            onClick={handleStopTimer}
-                        >
-                            {isStopping ? 'Saving…' : 'Stop & save'}
+                            {isTimerActive ? (
+                                <>
+                                    <Square className="w-4 h-4 fill-current" />
+                                    {isStopping ? 'Saving…' : 'Stop & save'}
+                                </>
+                            ) : (
+                                <>
+                                    <Play className="w-4 h-4 fill-current" />
+                                    {isStarting ? 'Starting…' : 'Start timer'}
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
