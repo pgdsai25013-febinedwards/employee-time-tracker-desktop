@@ -68,6 +68,10 @@ export function useTimer(
     // Reconcile timestamps on component mount (handle crash/shutdown recovery)
     useEffect(() => {
         const runReconciliation = async () => {
+            // First, restore any active timer from backend
+            await restoreActiveTimer();
+
+            // Then run idle time reconciliation
             if (window.electronAPI?.timerReconcile) {
                 console.log('🔍 Running timestamp reconciliation on mount...');
                 const result = await window.electronAPI.timerReconcile();
@@ -99,26 +103,34 @@ export function useTimer(
             const minutes = Math.floor(idle / 60);
             const seconds = idle % 60;
 
-            let message = `You were away for ${minutes}m ${seconds}s`;
-            if (source === 'lock') message = `System was locked for ${minutes}m ${seconds}s`;
-            else if (source === 'suspend') message = `System went to sleep for ${minutes}m ${seconds}s`;
-            else if (source === 'shutdown') message = `System was off for ${minutes}m ${seconds}s`;
+            // If this idle event is for a gap > 60s, timer was auto-stopped by backend
+            // We need to clear the UI and show notification
+            if (idle >= 60) {
+                let message = `You were away for ${minutes}m ${seconds}s`;
+                if (source === 'lock') message = `System was locked for ${minutes}m ${seconds}s`;
+                else if (source === 'suspend') message = `System went to sleep for ${minutes}m ${seconds}s`;
+                else if (source === 'shutdown') message = `System was off for ${minutes}m ${seconds}s`;
 
-            if (clockTampering) {
-                message += ' ⚠️ Clock tampering detected!';
+                if (clockTampering) {
+                    message += ' ⚠️ Clock tampering detected!';
+                }
+
+                alert(`${message}\n\nTimer has been stopped and ${minutes} minutes of idle time recorded.`);
+
+                // Refresh logs to show updated data
+                await fetchRecentLogs();
+
+                // Clear timer state only if gap > 60s
+                setCurrentLogId(null);
+                setVolumeInput('');
+                timerStartAtRef.current = null;
+                setElapsedSeconds(0);
+                setIdleSeconds(0);
+            } else {
+                // For short gaps < 60s, just update idle time but keep timer running
+                console.log(`✅ Short idle period (${idle}s), timer continues`);
+                setIdleSeconds(idle);
             }
-
-            alert(`${message}\n\nTimer has been stopped and ${minutes} minutes of idle time recorded.`);
-
-            // Refresh logs to show updated data
-            await fetchRecentLogs();
-
-            // Clear timer state
-            setCurrentLogId(null);
-            setVolumeInput('');
-            timerStartAtRef.current = null;
-            setElapsedSeconds(0);
-            setIdleSeconds(0);
         });
 
         unsubscribeIdleEventRef.current = unsubscribe;
@@ -130,6 +142,24 @@ export function useTimer(
             }
         };
     }, [fetchRecentLogs, setVolumeInput]);
+
+    // Window focus listener - restore active timer when returning from lock screen
+    useEffect(() => {
+        const handleFocus = async () => {
+            console.log('🔍 Window focused - checking for active timer...');
+            // Check if we have a timer in UI
+            if (!currentLogId) {
+                // No timer in UI, check backend for active timer
+                await restoreActiveTimer();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [currentLogId]);
 
     // Electron idle monitoring
     useEffect(() => {
