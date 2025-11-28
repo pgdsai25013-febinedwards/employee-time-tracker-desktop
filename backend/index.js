@@ -208,7 +208,7 @@ app.get("/api/tasks", authMiddleware, async (req, res) => {
 
 // ---------- Start timer ----------
 app.post("/api/time-logs/start", authMiddleware, async (req, res) => {
-  const { task_template_id, work_location } = req.body;
+  const { task_template_id, work_location, instance_id } = req.body;
   const userId = req.user.user_id;
 
   if (!task_template_id) return res.status(400).json({ error: "task_template_id required" });
@@ -219,18 +219,35 @@ app.post("/api/time-logs/start", authMiddleware, async (req, res) => {
 
     const task = taskRes.rows[0];
 
+    // Validation 1: Check if user already has an active timer
     const open = await pool.query("SELECT 1 FROM time_logs WHERE user_id=$1 AND ended_at IS NULL LIMIT 1", [userId]);
     if (open.rows.length > 0) return res.status(400).json({ error: "You already have an active timer." });
+
+    // Validation 2: If instance_id provided, check if this instance already has a running timer
+    if (instance_id) {
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(instance_id)) {
+        return res.status(400).json({ error: "Invalid instance_id format" });
+      }
+
+      const instanceCheck = await pool.query(
+        "SELECT id FROM time_logs WHERE instance_id = $1 AND ended_at IS NULL LIMIT 1",
+        [instance_id]
+      );
+      if (instanceCheck.rows.length > 0) {
+        return res.status(409).json({ error: "Timer already running on this device. Stop it first." });
+      }
+    }
 
     // Validate work_location
     const validLocations = ['office', 'wfh', 'unknown'];
     const location = validLocations.includes(work_location) ? work_location : 'unknown';
 
     const insert = await pool.query(
-      `INSERT INTO time_logs (user_id, team_id, task_template_id, work_date, started_at, work_location)
-       VALUES ($1, $2, $3, CURRENT_DATE, NOW(), $4)
+      `INSERT INTO time_logs (user_id, team_id, task_template_id, work_date, started_at, work_location, instance_id)
+       VALUES ($1, $2, $3, CURRENT_DATE, NOW(), $4, $5)
        RETURNING *`,
-      [userId, task.team_id, task_template_id, location]
+      [userId, task.team_id, task_template_id, location, instance_id || null]
     );
 
     return res.json({ message: "Timer started", log: insert.rows[0] });
@@ -272,9 +289,28 @@ app.post("/api/time-logs/stop", authMiddleware, async (req, res) => {
     const diffRes = await pool.query("SELECT EXTRACT(EPOCH FROM ($1::timestamptz - $2::timestamptz)) AS seconds", [endedAt, log.started_at]);
     let durationSeconds = Math.max(0, Math.round(diffRes.rows[0].seconds || 0));
 
+    // Validation: Idle time sanity checks
     let idle = Number(idle_seconds) || 0;
-    if (idle < 0) idle = 0;
-    if (idle > durationSeconds) idle = durationSeconds;
+
+    // Idle can't be negative
+    if (idle < 0) {
+      console.warn(`⚠️ Negative idle time rejected: ${idle}s for log ${time_log_id}`);
+      idle = 0;
+    }
+
+    // Idle can't exceed total duration
+    if (idle > durationSeconds) {
+      console.warn(`⚠️ Idle time exceeds duration: ${idle}s > ${durationSeconds}s for log ${time_log_id}`);
+      idle = durationSeconds;
+    }
+
+    // Idle can't be > 48 hours (suspicious)
+    const MAX_IDLE_SECONDS = 48 * 3600; // 48 hours
+    if (idle > MAX_IDLE_SECONDS) {
+      console.warn(`⚠️ Suspicious idle time: ${idle}s (${Math.floor(idle / 3600)}h) for log ${time_log_id}`);
+      // Cap it to max or flag for review
+      idle = Math.min(idle, MAX_IDLE_SECONDS);
+    }
 
     const productive = durationSeconds - idle;
     const vol = Number(volume) || 0;
