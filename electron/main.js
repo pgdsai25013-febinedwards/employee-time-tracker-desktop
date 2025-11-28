@@ -402,7 +402,18 @@ ipcMain.handle('check-vpn-status', async () => {
         // 1. Check Network Interfaces (Enhanced)
         const checkInterfaces = () => {
             const interfaces = os.networkInterfaces();
-            const vpnKeywords = ['tun', 'tap', 'wintun', 'openvpn', 'wireguard', 'wg', 'zscaler', 'z-tunnel'];
+            // Expanded keyword list to include more VPN types
+            const vpnKeywords = [
+                'tun', 'tap', 'wintun',
+                'openvpn', 'wireguard', 'wg',
+                'zscaler', 'z-tunnel',
+                'vpn', 'bdvpnservice',  // Added: generic vpn and bdvpnservice (user's VPN)
+                'cisco', 'anyconnect',   // Cisco VPN
+                'pulse', 'juniper',      // Pulse Secure / Juniper VPN
+                'forticlient', 'fortinet', // FortiClient VPN
+                'pptp', 'l2tp',          // Legacy VPN protocols
+                'sonicwall', 'globalprotect' // Other common VPNs
+            ];
 
             for (const name of Object.keys(interfaces)) {
                 const lowerName = name.toLowerCase();
@@ -413,11 +424,12 @@ ipcMain.handle('check-vpn-status', async () => {
                         details.address !== '0.0.0.0'
                     );
                     if (iface) {
-                        console.log(`VPN detected on interface: ${name}`);
+                        console.log(`VPN detected on interface: ${name} (${iface.address})`);
                         return true;
                     }
                 }
             }
+            console.log('No VPN interface detected');
             return false;
         };
 
@@ -546,6 +558,13 @@ ipcMain.handle('timer:get-instance-id', async () => {
     } catch (error) {
         console.error('Error getting instance ID:', error);
         return { instanceId: null };
+    }
+});
+
+// Renderer ready handshake
+ipcMain.on('renderer-ready', () => {
+    if (idleManager) {
+        idleManager.setRendererReady(true);
     }
 });
 

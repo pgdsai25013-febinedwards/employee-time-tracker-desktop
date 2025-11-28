@@ -51,7 +51,8 @@ const App: React.FC = () => {
         selectedTaskId,
         volumeInput,
         setVolumeInput,
-        timeLogs.fetchRecentLogs,
+        setSelectedTaskId,          // ← ADD THIS LINE
+        timeLogs.fetchRecentLogs,   // ← This moves to line 55
         tasks
     );
 

@@ -277,8 +277,9 @@ class IdleManager {
             // Send to renderer
             this.sendIdleEventToRenderer(idleEvent);
 
-            // Stop tracking (timer should be auto-stopped)
-            this.stopTracking();
+            // Continue tracking (do NOT stop)
+            // Just update heartbeat to reset timestamps for next interval
+            this.updateHeartbeat();
 
             return idleEvent;
         } else {

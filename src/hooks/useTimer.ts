@@ -9,6 +9,7 @@ export function useTimer(
     selectedTaskId: number | string,
     volumeInput: string,
     setVolumeInput: (value: string) => void,
+    setSelectedTaskId: (id: number | '') => void,
     fetchRecentLogs: () => Promise<void>,
     tasks: any[] = []
 ) {
@@ -23,6 +24,34 @@ export function useTimer(
     const timerStartAtRef = useRef<number | null>(null);
     const unsubscribeIdleRef = useRef<(() => void) | null>(null);
     const unsubscribeIdleEventRef = useRef<(() => void) | null>(null);
+    const accumulatedIdleRef = useRef(0);
+    const lastSystemIdleRef = useRef(0);
+    const ignoreNextSoftIdleResetRef = useRef(false);
+    const currentLogIdRef = useRef<number | null>(null);
+
+    const getIdleStorageKey = (logId: number) => `ett_idle_${logId}`;
+
+    const persistIdleState = (value?: number) => {
+        const logId = currentLogIdRef.current;
+        if (!logId) return;
+        const key = getIdleStorageKey(logId);
+        const toStore = typeof value === 'number' ? value : accumulatedIdleRef.current;
+        localStorage.setItem(key, String(toStore));
+    };
+
+    const clearIdleState = (logId?: number) => {
+        const target = logId ?? currentLogIdRef.current;
+        if (!target) return;
+        localStorage.removeItem(getIdleStorageKey(target));
+    };
+
+    const loadIdleState = (logId: number, fallback: number) => {
+        const stored = localStorage.getItem(getIdleStorageKey(logId));
+        if (stored == null) return fallback;
+        const parsed = Number(stored);
+        if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+        return parsed;
+    };
 
     // API fetch helper
     async function apiFetch(input: string, init: RequestInit = {}) {
@@ -41,20 +70,36 @@ export function useTimer(
         return response;
     }
 
+    // Keep ref in sync for persistence helpers
+    useEffect(() => {
+        currentLogIdRef.current = currentLogId;
+    }, [currentLogId]);
+
+    // Notify main process once renderer mounted
+    useEffect(() => {
+        window.electronAPI?.rendererReady?.();
+    }, []);
+
     // Restore active timer
     const restoreActiveTimer = async () => {
+        if (!authToken) return; // Don't fetch if not authenticated
+
         try {
-            const res = await apiFetch('/api/time-logs/recent?days=1');
+            const res = await apiFetch('/api/time-logs/recent?days=30');
             if (!res.ok) return;
             const data = await res.json();
             const active = data.find((l: any) => l.ended_at === null);
             if (!active) return;
             setCurrentLogId(active.id);
+            currentLogIdRef.current = active.id;
             const startedAtMs = new Date(active.started_at).getTime();
             timerStartAtRef.current = startedAtMs;
             const diff = Math.floor((Date.now() - startedAtMs) / 1000);
             setElapsedSeconds(diff > 0 ? diff : 0);
-            setIdleSeconds(active.idle_seconds ?? 0);
+            const restoredIdle = loadIdleState(active.id, active.idle_seconds ?? 0);
+            setIdleSeconds(restoredIdle);
+            accumulatedIdleRef.current = restoredIdle;
+            persistIdleState(restoredIdle);
 
             // Start idle tracking for restored timer
             if (window.electronAPI?.timerStart) {
@@ -67,6 +112,8 @@ export function useTimer(
 
     // Reconcile timestamps on component mount (handle crash/shutdown recovery)
     useEffect(() => {
+        if (!authToken) return; // Wait for auth token to be available
+
         const runReconciliation = async () => {
             // First, restore any active timer from backend
             await restoreActiveTimer();
@@ -90,21 +137,20 @@ export function useTimer(
         };
 
         runReconciliation();
-    }, []); // Run once on mount
+    }, [authToken]);
 
-    // Subscribe to idle events from main process
+    // Subscribe to idle events from main process (Hard Idle: Lock, Sleep, Shutdown)
     useEffect(() => {
         if (!window.electronAPI?.onIdleEvent) return;
 
-        const unsubscribe = window.electronAPI.onIdleEvent(async (idleEvent) => {
+        const unsubscribe = window.electronAPI.onIdleEvent(async (idleEvent: any) => {
             console.log('🚨 Idle event received:', idleEvent);
 
             const { idleSeconds: idle, source, clockTampering } = idleEvent;
             const minutes = Math.floor(idle / 60);
             const seconds = idle % 60;
 
-            // If this idle event is for a gap > 60s, timer was auto-stopped by backend
-            // We need to clear the UI and show notification
+            // If this idle event is for a gap > 60s, we accumulate it
             if (idle >= 60) {
                 let message = `You were away for ${minutes}m ${seconds}s`;
                 if (source === 'lock') message = `System was locked for ${minutes}m ${seconds}s`;
@@ -115,21 +161,28 @@ export function useTimer(
                     message += ' ⚠️ Clock tampering detected!';
                 }
 
-                alert(`${message}\n\nTimer has been stopped and ${minutes} minutes of idle time recorded.`);
+                // Notify user but KEEP TIMER RUNNING
+                alert(`${message}\n\nThis time has been added to your idle time.`);
 
-                // Refresh logs to show updated data
+                // Accumulate idle time
+                accumulatedIdleRef.current += idle;
+                setIdleSeconds(accumulatedIdleRef.current);
+                persistIdleState();
+
+                // Prevent soft idle from double counting this event
+                ignoreNextSoftIdleResetRef.current = true;
+                setTimeout(() => {
+                    ignoreNextSoftIdleResetRef.current = false;
+                }, 2000);
+
+                // Refresh logs to ensure backend is in sync (optional, but good for UI)
                 await fetchRecentLogs();
-
-                // Clear timer state only if gap > 60s
-                setCurrentLogId(null);
-                setVolumeInput('');
-                timerStartAtRef.current = null;
-                setElapsedSeconds(0);
-                setIdleSeconds(0);
             } else {
                 // For short gaps < 60s, just update idle time but keep timer running
                 console.log(`✅ Short idle period (${idle}s), timer continues`);
-                setIdleSeconds(idle);
+                // For short gaps from IdleManager (which shouldn't happen for <60s), we accumulate
+                accumulatedIdleRef.current += idle;
+                setIdleSeconds(accumulatedIdleRef.current);
             }
         });
 
@@ -143,38 +196,41 @@ export function useTimer(
         };
     }, [fetchRecentLogs, setVolumeInput]);
 
-    // Window focus listener - restore active timer when returning from lock screen
-    useEffect(() => {
-        const handleFocus = async () => {
-            console.log('🔍 Window focused - checking for active timer...');
-            // Check if we have a timer in UI
-            if (!currentLogId) {
-                // No timer in UI, check backend for active timer
-                await restoreActiveTimer();
-            }
-        };
-
-        window.addEventListener('focus', handleFocus);
-
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-        };
-    }, [currentLogId]);
-
-    // Electron idle monitoring
+    // Electron idle monitoring (Soft Idle: Mouse/Keyboard Inactivity)
     useEffect(() => {
         if (currentLogId !== null) {
             // Start monitoring when timer is active
             if (window.electronAPI) {
-                window.electronAPI.startIdleMonitoring(1000);
+                window.electronAPI.startIdleMonitoring();
             }
 
             const unsubscribe = window.electronAPI?.onIdleTimeUpdate((systemIdleSeconds: number) => {
-                setCurrentSystemIdle(systemIdleSeconds);
                 const IDLE_THRESHOLD = 60;
-                if (systemIdleSeconds >= IDLE_THRESHOLD) {
-                    setIdleSeconds(systemIdleSeconds);
+
+                // Detect reset (User came back)
+                if (systemIdleSeconds < lastSystemIdleRef.current) {
+                    // Was the previous idle session valid?
+                    if (lastSystemIdleRef.current >= IDLE_THRESHOLD) {
+                        if (!ignoreNextSoftIdleResetRef.current) {
+                            console.log(`👤 User returned. Accumulating soft idle: ${lastSystemIdleRef.current}s`);
+                            accumulatedIdleRef.current += lastSystemIdleRef.current;
+                            persistIdleState();
+                        } else {
+                            console.log('🛡️ Ignoring soft idle reset (covered by hard idle event)');
+                        }
+                    }
                 }
+                lastSystemIdleRef.current = systemIdleSeconds;
+
+                setCurrentSystemIdle(systemIdleSeconds);
+
+                // Calculate total idle = accumulated (hard events + past soft idle) + current (soft idle)
+                let currentSoftIdle = 0;
+                if (systemIdleSeconds >= IDLE_THRESHOLD) {
+                    currentSoftIdle = systemIdleSeconds;
+                }
+
+                setIdleSeconds(accumulatedIdleRef.current + currentSoftIdle);
             });
 
             unsubscribeIdleRef.current = unsubscribe || null;
@@ -196,6 +252,26 @@ export function useTimer(
             }
         };
     }, [currentLogId]);
+
+    // Window focus listener - restore active timer when returning from lock screen
+    useEffect(() => {
+        const handleFocus = async () => {
+            if (!authToken) return; // Don't check if not authenticated
+
+            console.log('🔍 Window focused - checking for active timer...');
+            // Check if we have a timer in UI
+            if (!currentLogId) {
+                // No timer in UI, check backend for active timer
+                await restoreActiveTimer();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [currentLogId, authToken]);
 
     // Elapsed interval
     useEffect(() => {
@@ -227,9 +303,12 @@ export function useTimer(
                 });
 
                 setCurrentLogId(tempId);
+                currentLogIdRef.current = tempId;
                 timerStartAtRef.current = Date.now();
                 setElapsedSeconds(0);
                 setIdleSeconds(0);
+                accumulatedIdleRef.current = 0;
+                localStorage.setItem(getIdleStorageKey(tempId), '0');
 
                 await fetchRecentLogs();
                 alert('Timer started (Offline Mode).');
@@ -281,11 +360,14 @@ export function useTimer(
             }
             const data = await res.json();
             setCurrentLogId(data.log.id);
+            currentLogIdRef.current = data.log.id;
             const startedAtMs = new Date(data.log.started_at).getTime();
             timerStartAtRef.current = startedAtMs;
             const diff = Math.floor((Date.now() - startedAtMs) / 1000);
             setElapsedSeconds(diff > 0 ? diff : 0);
             setIdleSeconds(0);
+            accumulatedIdleRef.current = 0;
+            localStorage.setItem(getIdleStorageKey(data.log.id), '0');
 
             // Start idle tracking in Electron
             if (window.electronAPI?.timerStart) {
@@ -326,9 +408,11 @@ export function useTimer(
 
                 setCurrentLogId(null);
                 setVolumeInput('');
+                setSelectedTaskId(''); // Clear task selection
                 timerStartAtRef.current = null;
                 setElapsedSeconds(0);
                 setIdleSeconds(0);
+                clearIdleState(currentLogId);
 
                 await fetchRecentLogs();
                 alert('Timer stopped (Offline Mode). Changes will sync when online.');
@@ -365,9 +449,11 @@ export function useTimer(
 
             setCurrentLogId(null);
             setVolumeInput('');
+            setSelectedTaskId(''); // Clear task selection
             timerStartAtRef.current = null;
             setElapsedSeconds(0);
             setIdleSeconds(0);
+            clearIdleState(currentLogId);
             await fetchRecentLogs();
         } catch (err) {
             console.error('Error stopping timer', err);
