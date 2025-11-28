@@ -410,6 +410,43 @@ app.get("/api/time-logs/recent", authMiddleware, async (req, res) => {
   }
 });
 
+// ---------- Filter logs by date range ----------
+app.get("/api/time-logs/filter", authMiddleware, async (req, res) => {
+  const { from, to } = req.query;
+  const user = req.user;
+
+  if (!from || !to) {
+    return res.status(400).json({ error: "from and to query parameters required" });
+  }
+
+  try {
+    const params = [from, to];
+    const where = ["tl.work_date BETWEEN $1 AND $2"];
+
+    if (user.role === "manager") {
+      params.push(user.team_id);
+      where.push("tl.team_id = $3");
+    } else {
+      params.push(user.user_id);
+      where.push("tl.user_id = $3");
+    }
+
+    const result = await pool.query(
+      `SELECT tl.*, json_build_object('id', tt.id, 'name', tt.name) AS task_templates
+       FROM time_logs tl
+       LEFT JOIN task_templates tt ON tl.task_template_id = tt.id
+       WHERE ${where.join(" AND ")}
+       ORDER BY tl.work_date DESC, tl.started_at DESC`,
+      params
+    );
+
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("Error filtering logs:", err);
+    return res.status(500).json({ error: "Failed to filter logs" });
+  }
+});
+
 // ---------- Edit / Delete / Export / Month locks (unchanged, but with logging) ----------
 // For brevity — keep your existing code for these routes, but ensure you have consistent logging.
 // I've kept the implementations you already had — if you'd like I can paste them here verbatim as well.
