@@ -44,9 +44,9 @@ export function AppHeader({
             <div className="flex items-center gap-2">
                 <img src="/employee-time-tracker-icon.svg" alt="App Logo" className="h-8 w-8 rounded-full" />
                 <div>
-                    <div className="text-sm font-semibold">Employee Time Tracker - Desktop</div>
+                    <div className="text-sm font-semibold">Employee Time Tracker</div>
                     <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2">
-                        <span>System-wide idle detection powered by Electron</span>
+                        <span>Ops Activity Tracking App</span>
                         <Badge variant={isOnline ? 'default' : 'destructive'} className="text-[10px] flex items-center gap-1">
                             {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                             {isOnline ? 'Online' : 'Offline'}

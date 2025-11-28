@@ -6,7 +6,7 @@ export function LoginPage() {
             <Card className="w-full max-w-md bg-slate-900/80 border-slate-800">
                 <CardHeader className="flex flex-col items-center gap-2 py-6">
                     <img src="/employee-time-tracker-icon.svg" alt="App Logo" className="h-12 w-12 rounded-full" />
-                    <CardTitle className="text-lg text-center">Employee Time Tracker - Desktop</CardTitle>
+                    <CardTitle className="text-lg text-center">Employee Time Tracker</CardTitle>
                     <p className="text-[12px] text-slate-400 text-center max-w-xs">
                         Sign in with your Google account to start tracking time with system-wide idle detection.
                     </p>
