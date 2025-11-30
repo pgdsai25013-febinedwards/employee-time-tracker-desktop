@@ -92,6 +92,13 @@ export function useTimer(
             if (!active) return;
             setCurrentLogId(active.id);
             currentLogIdRef.current = active.id;
+
+            // Restore selected task ID if available
+            if (active.task_template_id) {
+                console.log('🔄 Restoring task ID:', active.task_template_id);
+                setSelectedTaskId(active.task_template_id);
+            }
+
             const startedAtMs = new Date(active.started_at).getTime();
             timerStartAtRef.current = startedAtMs;
             const diff = Math.floor((Date.now() - startedAtMs) / 1000);
@@ -396,6 +403,24 @@ export function useTimer(
 
         const volume = Number(volumeInput) || 0;
         const idle_seconds = idleSeconds;
+
+        // Validation Logic
+        const currentTask = tasks.find((t: any) => t.id === Number(selectedTaskId));
+        if (currentTask) {
+            const categoryName = (currentTask.category_name || '').toLowerCase();
+            const isCore = categoryName === 'core';
+            const isNonCoreOrUnproductive = categoryName === 'non-core' || categoryName === 'unproductive';
+
+            if (isCore && volume <= 0) {
+                alert('Volume is required for Core tasks. Please enter the volume processed.');
+                return;
+            }
+
+            if (isNonCoreOrUnproductive && volume > 0) {
+                alert(`Volume should not be entered for ${currentTask.category_name} tasks. Please remove the volume.`);
+                return;
+            }
+        }
 
         // Check for offline mode
         if (!offlineManager.getOnlineStatus()) {

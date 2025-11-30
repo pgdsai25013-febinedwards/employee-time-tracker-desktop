@@ -15,8 +15,11 @@ export interface DashboardMetrics {
 
 export interface DailyActivity {
     date: string;
-    hours: number;
-    productive: number;
+    total: number;
+    core: number;
+    non_core: number;
+    unproductive: number;
+    other: number;
 }
 
 export interface TaskDistribution {
@@ -34,6 +37,7 @@ export interface CategoryDistribution {
     name: string;
     value: number; // hours
     color: string;
+    [key: string]: any;
 }
 
 export function useDashboardData(authToken: string | null) {
@@ -50,18 +54,18 @@ export function useDashboardData(authToken: string | null) {
     const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
     const [locationData, setLocationData] = useState<WorkLocationData[]>([]);
     const [targetHours, setTargetHours] = useState<number>(8.0);
+    const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+        from: new Date(new Date().setDate(new Date().getDate() - 30)),
+        to: new Date()
+    });
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch data for the last 30 days
+    // Fetch data based on date range
     const fetchDashboardData = async () => {
         setIsLoading(true);
         try {
-            const today = new Date();
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-
-            const from = thirtyDaysAgo.toISOString().split('T')[0];
-            const to = today.toISOString().split('T')[0];
+            const from = dateRange.from.toISOString().split('T')[0];
+            const to = dateRange.to.toISOString().split('T')[0];
 
             let logs: any[] = [];
 
@@ -74,9 +78,13 @@ export function useDashboardData(authToken: string | null) {
                     });
 
                     // If filter endpoint doesn't exist (404), fall back to recent endpoint
+                    // Note: Recent endpoint might not respect custom dates perfectly if it only takes 'days'
                     if (res.status === 404) {
                         console.log('Filter endpoint not found, falling back to recent endpoint');
-                        res = await fetch(`${API_BASE}/api/time-logs/recent?days=30`, {
+                        // Calculate days difference
+                        const diffTime = Math.abs(dateRange.to.getTime() - dateRange.from.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        res = await fetch(`${API_BASE}/api/time-logs/recent?days=${diffDays}`, {
                             headers: { 'Authorization': `Bearer ${authToken}` }
                         });
                     }
@@ -93,8 +101,6 @@ export function useDashboardData(authToken: string | null) {
 
             // 2. Merge with local DB (for offline support)
             const localLogs = await db.getCachedLogs();
-            // Simple merge: if ID exists in logs, replace, else add.
-            // Note: This is a simplified merge strategy.
             const logMap = new Map(logs.map(l => [l.id, l]));
             localLogs.forEach(l => {
                 const d = l.work_date ? l.work_date.split('T')[0] : '';
@@ -125,16 +131,38 @@ export function useDashboardData(authToken: string | null) {
             'non-core': 0,
             'unproductive': 0
         };
-        const dailyMap: Record<string, { total: number, idle: number }> = {};
+
+        // Structure for daily breakdown
+        interface DailyBreakdown {
+            total: number;
+            core: number;
+            non_core: number;
+            unproductive: number;
+            other: number;
+        }
+        const dailyMap: Record<string, DailyBreakdown> = {};
+
+        // Initialize daily map for the entire range to ensure no gaps in chart
+        const currentDate = new Date(dateRange.from);
+        const endDate = new Date(dateRange.to);
+        while (currentDate <= endDate) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            dailyMap[dateStr] = { total: 0, core: 0, non_core: 0, unproductive: 0, other: 0 };
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
 
         logs.forEach(log => {
             const duration = log.duration_seconds || 0;
             const idle = log.idle_seconds || 0;
-            // const productive = Math.max(0, duration - idle); // Unused
             const taskName = log.task_templates?.name || log.task_name || 'Unknown';
             const categoryName = (log.task_templates?.category_name || 'unknown').toLowerCase();
             const location = log.work_location;
             const date = log.work_date ? log.work_date.split('T')[0] : '';
+
+            // Only process logs within the selected range
+            const fromStr = dateRange.from.toISOString().split('T')[0];
+            const toStr = dateRange.to.toISOString().split('T')[0];
+            if (date < fromStr || date > toStr) return;
 
             totalSeconds += duration;
             idleSeconds += idle;
@@ -147,7 +175,6 @@ export function useDashboardData(authToken: string | null) {
             if (categoryHours[categoryName] !== undefined) {
                 categoryHours[categoryName] += duration;
             } else {
-                // Handle unknown categories if any
                 if (!categoryHours['other']) categoryHours['other'] = 0;
                 categoryHours['other'] += duration;
             }
@@ -157,10 +184,13 @@ export function useDashboardData(authToken: string | null) {
             else if (location === 'office') officeCount++;
 
             // Daily Trend
-            if (date) {
-                if (!dailyMap[date]) dailyMap[date] = { total: 0, idle: 0 };
+            if (date && dailyMap[date]) {
                 dailyMap[date].total += duration;
-                dailyMap[date].idle += idle;
+
+                if (categoryName === 'core') dailyMap[date].core += duration;
+                else if (categoryName === 'non-core') dailyMap[date].non_core += duration;
+                else if (categoryName === 'unproductive') dailyMap[date].unproductive += duration;
+                else dailyMap[date].other += duration;
             }
         });
 
@@ -187,14 +217,24 @@ export function useDashboardData(authToken: string | null) {
             productivityScore,
             topTask,
             wfhPercentage,
-            utilization: 0 // Will be updated below
+            utilization: 0
         });
 
-        // Calculate Utilization
-        const uniqueDays = Object.keys(dailyMap).length;
-        const avgDailyProductive = uniqueDays > 0 ? productiveHours / uniqueDays : 0;
-        const utilization = uniqueDays > 0 ? Math.round((avgDailyProductive / targetHours) * 100) : 0;
+        // Calculate Utilization based on working days in range
+        // Simple heuristic: count days with > 0 activity as working days, or just use total days in range excluding weekends?
+        // For robustness, let's use the number of days in range that are weekdays.
+        let workingDays = 0;
+        const d = new Date(dateRange.from);
+        const end = new Date(dateRange.to);
+        while (d <= end) {
+            const day = d.getDay();
+            if (day !== 0 && day !== 6) workingDays++; // Exclude Sun (0) and Sat (6)
+            d.setDate(d.getDate() + 1);
+        }
+        // Avoid division by zero
+        workingDays = Math.max(1, workingDays);
 
+        const utilization = Math.round((productiveHours / (workingDays * targetHours)) * 100);
         setMetrics(prev => ({ ...prev, utilization }));
 
         // Charts: Daily Activity
@@ -202,10 +242,12 @@ export function useDashboardData(authToken: string | null) {
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([date, data]) => ({
                 date: new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                hours: Math.round(data.total / 3600 * 10) / 10,
-                productive: Math.round((data.total - data.idle) / 3600 * 10) / 10
-            }))
-            .slice(-7); // Last 7 days for better visibility
+                total: Math.round(data.total / 3600 * 10) / 10,
+                core: Math.round(data.core / 3600 * 10) / 10,
+                non_core: Math.round(data.non_core / 3600 * 10) / 10,
+                unproductive: Math.round(data.unproductive / 3600 * 10) / 10,
+                other: Math.round(data.other / 3600 * 10) / 10
+            }));
         setDailyActivity(activityData);
 
         // Charts: Task Distribution (Top 5)
@@ -247,7 +289,7 @@ export function useDashboardData(authToken: string | null) {
         if (authToken) {
             fetchDashboardData();
         }
-    }, [authToken, targetHours]);
+    }, [authToken, targetHours, dateRange]);
 
     return {
         metrics,
@@ -258,6 +300,8 @@ export function useDashboardData(authToken: string | null) {
         isLoading,
         targetHours,
         setTargetHours,
+        dateRange,
+        setDateRange,
         refresh: fetchDashboardData
     };
 }

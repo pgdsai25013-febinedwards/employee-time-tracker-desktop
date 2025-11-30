@@ -10,6 +10,13 @@ export interface ElectronAPI {
     notifyTimerStateChanged: (isActive: boolean) => void;
     sendDailyStats: (stats: { totalSeconds: number; productiveSeconds: number }) => void;
     onRequestDailyStats: (callback: () => void) => () => void;
+    checkVpnStatus: () => Promise<boolean>;
+    timerStart: (data: { logId: number; taskId: number | string }) => Promise<void>;
+    timerStop: (logId: number) => Promise<void>;
+    timerReconcile: () => Promise<{ gapDetected: boolean }>;
+    timerGetInstanceId: () => Promise<{ instanceId: string }>;
+    onIdleEvent: (callback: (event: any) => void) => () => void;
+    rendererReady: () => void;
 }
 
 declare global {
