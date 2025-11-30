@@ -44,7 +44,7 @@
         "wait-on": "^7.2.0"
     },
     "build": {
-        "appId": "com.yourcompany.employee-timetracker",
+        "appId": "employee-timetracker-Notification",
         "productName": "Employee Time Tracker",
         "files": [
             "dist/**/*",

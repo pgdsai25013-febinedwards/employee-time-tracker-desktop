@@ -197,7 +197,7 @@ class NotificationManager {
 // Create the main application window
 function createWindow() {
     // Set App User Model ID for Windows Taskbar grouping and icon
-    app.setAppUserModelId('com.yourcompany.employee-timetracker');
+    app.setAppUserModelId('employee-timetracker-Notification');
 
     const getIconPath = () => {
         const iconName = 'tray-icon.png';

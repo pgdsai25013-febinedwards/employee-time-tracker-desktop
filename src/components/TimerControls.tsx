@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
-    Play,
     Square,
     Check,
     ChevronsUpDown,
@@ -227,6 +225,24 @@ export function TimerControls({
     handleStartTimer,
     handleStopTimer,
 }: TimerControlsProps) {
+    const volumeInputRef = useRef<HTMLInputElement>(null);
+
+    // Get the selected task's category
+    const selectedTask = tasks.find(t => t.id === selectedTaskId);
+    const isCoreTask = selectedTask?.category_name?.toLowerCase() === 'core';
+
+    // Wrapper function to handle stop timer and focus volume if needed
+    const handleStopTimerWithFocus = async () => {
+        // Focus volume input IMMEDIATELY if it's a core task without volume
+        // This prevents the freeze/delay when validation fails
+        if (isCoreTask && !volumeInput.trim()) {
+            volumeInputRef.current?.focus();
+        }
+
+        // Then call the async stop function
+        await handleStopTimer();
+    };
+
     return (
         <Card className="bg-slate-900/70 border-slate-800">
             <CardHeader className="pb-2">
@@ -260,6 +276,7 @@ export function TimerControls({
                         <div className="text-xs text-slate-400">Volume (units processed)</div>
 
                         <Input
+                            ref={volumeInputRef}
                             placeholder="e.g. 120"
                             value={volumeInput}
                             onChange={(e) => setVolumeInput(e.target.value)}
@@ -270,41 +287,65 @@ export function TimerControls({
                     </div>
 
                     {/* Start / Stop Button */}
-                    <div className="flex gap-2 justify-end">
-                        <Button
-                            className={cn(
-                                "transition-all duration-300 min-w-[140px] gap-2 text-white",
-                                isTimerActive
-                                    ? "bg-red-500 hover:bg-red-600"
-                                    : "bg-emerald-500 hover:bg-emerald-600"
-                            )}
-                            disabled={
-                                (!isTimerActive &&
-                                    (!selectedTaskId || !selectedTeamId || isStarting)) ||
-                                (isTimerActive && isStopping)
-                            }
-                            onClick={isTimerActive ? handleStopTimer : handleStartTimer}
-                        >
-                            {isTimerActive ? (
-                                <>
-                                    <Square className="w-4 h-4" />
-                                    {isStopping ? "Saving…" : "Stop & save"}
-                                </>
-                            ) : (
-                                <>
-                                    <Play className="w-4 h-4" />
-                                    {isStarting ? "Starting…" : "Start timer"}
-                                </>
-                            )}
-                        </Button>
+                    <div className="space-y-1">
+                        <div className="text-xs text-slate-400 invisible">Action</div>
+
+                        <div className="flex gap-2 items-center">
+                            <button
+                                disabled={
+                                    (!isTimerActive &&
+                                        (!selectedTaskId || !selectedTeamId || isStarting)) ||
+                                    (isTimerActive && isStopping)
+                                }
+                                onClick={isTimerActive ? handleStopTimerWithFocus : handleStartTimer}
+                                className={cn(
+                                    "relative h-10 w-10 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group",
+                                    "shadow-xl hover:scale-110 active:scale-95"
+                                )}
+                                style={{
+                                    background: isTimerActive
+                                        ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 50%, #c44569 100%)'
+                                        : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #2dd4bf 100%)',
+                                    boxShadow: isTimerActive
+                                        ? '0 4px 20px rgba(239, 68, 68, 0.4), inset 0 -4px 10px rgba(0, 0, 0, 0.2), inset 0 4px 10px rgba(255, 255, 255, 0.2)'
+                                        : '0 4px 20px rgba(20, 184, 166, 0.4), inset 0 -4px 10px rgba(0, 0, 0, 0.2), inset 0 4px 10px rgba(255, 255, 255, 0.2)'
+                                }}
+                            >
+                                {/* Icon container with white background */}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div
+                                        className="bg-white shadow-md"
+                                        style={{
+                                            width: isTimerActive ? '16px' : '18px',
+                                            height: isTimerActive ? '16px' : '20px',
+                                            borderRadius: isTimerActive ? '3px' : '0',
+                                            clipPath: isTimerActive ? 'none' : 'polygon(30% 20%, 30% 80%, 80% 50%)',
+                                        }}
+                                    >
+                                        {isTimerActive && (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <Square className="w-3 h-3 fill-current text-transparent" strokeWidth={0} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Loading state overlay */}
+                                {(isStarting || isStopping) && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded-full">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="text-[10px] text-slate-500 invisible">Helper</div>
                     </div>
                 </div>
 
                 {/* Idle Info */}
                 <div className="text-[11px] text-slate-500 leading-relaxed">
-                    <strong>System-wide idle detection:</strong> Idle time is calculated
-                    using OS-level APIs for full-computer activity (keyboard, mouse, app
-                    usage). Final productive time = Total Duration − Idle.
+                    Final productive time = Total Duration − Idle.
                 </div>
             </CardContent>
         </Card>
