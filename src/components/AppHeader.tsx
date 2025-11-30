@@ -42,7 +42,7 @@ export function AppHeader({
     return (
         <header className="w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
-                <img src="/employee-time-tracker-icon.svg" alt="App Logo" className="h-8 w-8 rounded-full" />
+                <img src="/tray-icon.png" alt="App Logo" className="h-8 w-8 rounded-full" />
                 <div>
                     <div className="text-sm font-semibold">Employee Time Tracker</div>
                     <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2">
