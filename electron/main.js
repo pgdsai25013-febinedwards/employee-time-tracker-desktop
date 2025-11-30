@@ -196,6 +196,27 @@ class NotificationManager {
 
 // Create the main application window
 function createWindow() {
+    // Set App User Model ID for Windows Taskbar grouping and icon
+    app.setAppUserModelId('com.yourcompany.employee-timetracker');
+
+    const getIconPath = () => {
+        const iconName = 'tray-icon.png';
+        const publicIcon = path.join(__dirname, '../public', iconName);
+        const buildIcon = path.join(__dirname, '../build/icon.png');
+        const fs = require('fs');
+
+        if (fs.existsSync(publicIcon)) {
+            console.log('Using public icon:', publicIcon);
+            return publicIcon;
+        }
+        if (fs.existsSync(buildIcon)) {
+            console.log('Using build icon:', buildIcon);
+            return buildIcon;
+        }
+        console.log('No icon found');
+        return undefined;
+    };
+
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 900,
@@ -206,12 +227,7 @@ function createWindow() {
             contextIsolation: true,
             nodeIntegration: false,
         },
-        icon: (() => {
-            const iconName = 'tray-icon.png';
-            const iconPath = path.join(__dirname, '../public', iconName);
-            const fs = require('fs');
-            return fs.existsSync(iconPath) ? iconPath : undefined;
-        })(),
+        icon: getIconPath(),
         backgroundColor: '#020617', // slate-950
     });
 
